@@ -93,6 +93,19 @@ function RFQCreation({ user, onLogout }) {
     setLoading(true);
 
     try {
+      // Get user_ids for selected vendors (if they have linked accounts)
+      const { data: vendorData, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id, user_id')
+        .in('id', selectedVendors);
+
+      if (vendorError) throw vendorError;
+
+      // Extract user_ids where they exist
+      const selectedVendorUserIds = vendorData
+        .filter(v => v.user_id)
+        .map(v => v.user_id);
+
       // Insert RFQ
       const { data: rfqData, error: rfqError } = await supabase
         .from('rfqs')
@@ -105,7 +118,8 @@ function RFQCreation({ user, onLogout }) {
             deadline: formData.deadline,
             description: formData.description,
             status: 'pending',
-            selected_vendors: selectedVendors
+            selected_vendors: selectedVendors,
+            selected_vendor_user_ids: selectedVendorUserIds.length > 0 ? selectedVendorUserIds : null
           }
         ])
         .select()
