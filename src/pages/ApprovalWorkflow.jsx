@@ -20,44 +20,91 @@ function ApprovalWorkflow({ user, onLogout }) {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Fetch approvals
+      const { data: approvalsData, error: approvalsError } = await supabase
         .from('approvals')
-        .select(`
-          *,
-          rfqs(id, title, priority, created_at),
-          quotations(id, vendor_name, total_amount, vendor_id),
-          profiles!approvals_requested_by_fkey(full_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (approvalsError) throw approvalsError;
 
-      const approvalsList = data.map(approval => ({
-        id: approval.id,
-        rfqId: approval.rfqs?.id?.substring(0, 8) || 'N/A',
-        rfqTitle: approval.rfqs?.title || 'N/A',
-        priority: approval.rfqs?.priority || 'medium',
-        vendor: approval.quotations?.vendor_name || 'Unknown',
-        vendorId: approval.quotations?.vendor_id,
-        amount: Number(approval.quotations?.total_amount || 0),
-        submittedBy: approval.profiles?.full_name || 'Unknown',
-        submittedDate: formatDate(approval.created_at),
-        status: approval.status,
-        remarks: approval.remarks,
-        quotationId: approval.quotation_id,
-        rfqFullId: approval.rfq_id,
-        timeline: [
-          { stage: 'RFQ Created', status: 'completed', date: formatDate(approval.rfqs?.created_at) },
-          { stage: 'Quotation Selected', status: 'completed', date: formatDate(approval.created_at) },
-          { stage: 'Approval Review', status: approval.status === 'pending' ? 'current' : 'completed', date: approval.status !== 'pending' ? formatDate(approval.created_at) : null },
-          { stage: 'PO Generation', status: approval.status === 'approved' ? 'completed' : 'pending', date: null }
-        ]
-      }));
+      if (!approvalsData || approvalsData.length === 0) {
+        setApprovals([]);
+        return;
+      }
+
+      // Get related data separately to avoid join issues
+      const rfqIds = [...new Set(approvalsData.map(a => a.rfq_id).filter(Boolean))];
+      const quotationIds = [...new Set(approvalsData.map(a => a.quotation_id).filter(Boolean))];
+      const userIds = [...new Set(approvalsData.map(a => a.requested_by).filter(Boolean))];
+
+      // Fetch RFQs
+      const { data: rfqsData } = await supabase
+        .from('rfqs')
+        .select('id, title, priority, created_at')
+        .in('id', rfqIds);
+
+      // Fetch Quotations
+      const { data: quotationsData } = await supabase
+        .from('quotations')
+        .select('id, vendor_name, total_amount, vendor_id')
+        .in('id', quotationIds);
+
+      // Fetch User profiles
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      // Create lookup maps
+      const rfqsMap = (rfqsData || []).reduce((acc, rfq) => {
+        acc[rfq.id] = rfq;
+        return acc;
+      }, {});
+
+      const quotationsMap = (quotationsData || []).reduce((acc, q) => {
+        acc[q.id] = q;
+        return acc;
+      }, {});
+
+      const profilesMap = (profilesData || []).reduce((acc, p) => {
+        acc[p.id] = p;
+        return acc;
+      }, {});
+
+      // Map approvals with related data
+      const approvalsList = approvalsData.map(approval => {
+        const rfq = rfqsMap[approval.rfq_id] || {};
+        const quotation = quotationsMap[approval.quotation_id] || {};
+        const profile = profilesMap[approval.requested_by] || {};
+
+        return {
+          id: approval.id,
+          rfqId: rfq.id?.substring(0, 8) || 'N/A',
+          rfqTitle: rfq.title || 'N/A',
+          priority: rfq.priority || 'medium',
+          vendor: quotation.vendor_name || 'Unknown',
+          vendorId: quotation.vendor_id,
+          amount: Number(quotation.total_amount || 0),
+          submittedBy: profile.full_name || 'Unknown',
+          submittedDate: formatDate(approval.created_at),
+          status: approval.status,
+          remarks: approval.remarks,
+          quotationId: approval.quotation_id,
+          rfqFullId: approval.rfq_id,
+          timeline: [
+            { stage: 'RFQ Created', status: 'completed', date: formatDate(rfq.created_at) },
+            { stage: 'Quotation Selected', status: 'completed', date: formatDate(approval.created_at) },
+            { stage: 'Approval Review', status: approval.status === 'pending' ? 'current' : 'completed', date: approval.status !== 'pending' ? formatDate(approval.created_at) : null },
+            { stage: 'PO Generation', status: approval.status === 'approved' ? 'completed' : 'pending', date: null }
+          ]
+        };
+      });
 
       setApprovals(approvalsList);
     } catch (error) {
       console.error('Error fetching approvals:', error);
-      alert('Error loading approvals');
+      alert('Error loading approvals: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
