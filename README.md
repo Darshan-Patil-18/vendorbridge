@@ -1,116 +1,279 @@
 # 🛒 VendorBridge - Procurement Management System
 
-> **Live Demo:** [https://vendorbridgehackathon.netlify.app/](https://vendorbridgehackathon.netlify.app/)
+> **Live Demo:** [https://vendorbridge-lilac.vercel.app/](https://vendorbridge-lilac.vercel.app/)
 
-A modern, full-stack procurement management system built with React, Vite, and Supabase. VendorBridge streamlines the entire procurement lifecycle from RFQ creation to purchase order generation.
+A comprehensive, full-stack procurement management system that streamlines the entire procurement lifecycle from vendor management to purchase order generation. Built with modern web technologies for optimal performance and user experience.
+
+![VendorBridge](https://img.shields.io/badge/Status-Live-success)
+![React](https://img.shields.io/badge/React-18-blue)
+![Vite](https://img.shields.io/badge/Vite-5-purple)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green)
 
 ---
 
 ## 📋 Table of Contents
 
-- [Features](#-features)
+- [Overview](#-overview)
+- [Live Demo](#-live-demo)
+- [Key Features](#-key-features)
 - [Tech Stack](#-tech-stack)
+- [Complete Workflow Guide](#-complete-workflow-guide)
+- [User Roles Explained](#-user-roles-explained)
 - [Getting Started](#-getting-started)
-- [User Roles](#-user-roles)
-- [Procurement Workflow](#-procurement-workflow)
-- [Project Structure](#-project-structure)
-- [Environment Setup](#-environment-setup)
+- [Installation Guide](#-installation-guide)
+- [Database Setup](#-database-setup)
+- [Environment Configuration](#-environment-configuration)
 - [Deployment](#-deployment)
-- [Screenshots](#-screenshots)
+- [Usage Guide](#-usage-guide)
+- [Troubleshooting](#-troubleshooting)
+- [API Documentation](#-api-documentation)
+- [Contributing](#-contributing)
 - [License](#-license)
 
 ---
 
-## ✨ Features
+## 🌟 Overview
 
-### 🔐 Authentication & User Management
-- **Secure Login/Signup** with email and password
-- **Password Reset** functionality with email verification
-- **Role-Based Access Control** (Procurement Officer, Vendor, Manager, Admin)
+VendorBridge is a sophisticated procurement management platform designed to modernize and automate the procurement process for organizations of any size. The system eliminates manual paperwork, reduces procurement cycle time, and provides complete visibility into the procurement pipeline.
+
+### Why VendorBridge?
+
+- ⚡ **Faster Procurement**: Reduce procurement cycle time by up to 60%
+- 📊 **Complete Visibility**: Track every stage of procurement with real-time updates
+- 💰 **Cost Savings**: Compare multiple quotes side-by-side to get the best deals
+- 🔒 **Secure & Compliant**: Role-based access control with complete audit trails
+- 📈 **Data-Driven Insights**: Comprehensive analytics and reporting
+- 🌐 **Cloud-Based**: Access from anywhere, anytime
+
+---
+
+## 🚀 Live Demo
+
+**Production URL:** [https://vendorbridge-lilac.vercel.app/](https://vendorbridge-lilac.vercel.app/)
+
+### Test Accounts
+
+You can test the system with these demo accounts:
+
+| Role | Email | Password | Access |
+|------|-------|----------|--------|
+| Procurement Officer | officer@test.com | test123 | Create RFQs, Compare Quotes |
+| Vendor | vendor@test.com | test123 | View RFQs, Submit Quotes |
+| Manager/Approver | manager@test.com | test123 | Review & Approve Requests |
+
+> **Note:** Demo accounts may be reset periodically. Feel free to create your own test account!
+
+---
+
+## ✨ Key Features
+
+### 🔐 Authentication & Security
+- **Secure Authentication** with email/password
+- **Password Reset** with email verification
+- **Role-Based Access Control (RBAC)** for 4 user types
+- **Session Management** with automatic logout
 - **Profile Management** with organization details
+- **Audit Trails** for all user actions
 
-### 📦 Vendor Management
-- Add, edit, and delete vendor profiles
-- Track vendor ratings and performance metrics
-- Categorize vendors by industry/service type
-- Active/inactive vendor status management
-- Optional vendor-user account linking
+### � Vendor Management
+- **Complete Vendor Database**
+  - Add, edit, and delete vendor profiles
+  - Track vendor ratings (0-5 stars)
+  - Monitor total orders per vendor
+  - Categorize by industry/service type
+  - Active/inactive status management
+  - Optional vendor-user account linking
 
-### 📝 RFQ (Request for Quotation) Management
-- **Create RFQs** with multiple line items
-- Set priorities (Low, Medium, High, Urgent)
-- Define deadlines and specifications
-- **Select multiple vendors** for each RFQ
-- Track RFQ status throughout lifecycle
+- **Vendor Categories**
+  - IT & Hardware
+  - Office Supplies
+  - Services
+  - Maintenance
+  - General
 
-### 💼 Quotation Submission
-- Vendors can view **all available RFQs**
-- Submit detailed quotations with:
-  - Item-by-item pricing
-  - Delivery timelines
-  - Validity period
-  - Additional notes
-- Automatic total calculations
-- Prevention of duplicate quotations
+- **Vendor Performance Tracking**
+  - Historical order data
+  - Delivery time analysis
+  - Quality ratings
+  - Total spend per vendor
 
-### 🔍 Quotation Comparison
-- Side-by-side comparison of vendor quotes
-- Highlight best price and fastest delivery
-- View detailed item breakdowns
-- Select winning quotation for approval
+### 📝 RFQ (Request for Quotation) System
+- **Create Detailed RFQs**
+  - Multiple line items with specifications
+  - Quantity, unit, and product details
+  - Priority levels (Low, Medium, High, Urgent)
+  - Deadline management
+  - Rich text descriptions
+  
+- **Smart Vendor Selection**
+  - Select multiple vendors per RFQ
+  - Category-based vendor filtering
+  - Vendor availability status
+  
+- **RFQ Status Tracking**
+  - Pending: Awaiting vendor responses
+  - In Review: Comparing submitted quotes
+  - Approved: Winner selected and approved
+  - Rejected: Request declined
+  - Completed: Order fulfilled
+
+### 💼 Quotation Management
+- **Vendor Quote Submission**
+  - View all available RFQs in real-time
+  - Item-by-item pricing breakdown
+  - Delivery timeline specification
+  - Quotation validity period
+  - Additional terms and notes
+  - Automatic total calculations
+  - Duplicate submission prevention
+
+- **Intelligent Comparison**
+  - Side-by-side quote comparison
+  - Automatic highlighting of:
+    - 🏆 Best price (lowest total)
+    - ⚡ Fastest delivery
+    - ⭐ Highest rated vendor
+  - Detailed item-level breakdown
+  - Vendor rating display
+  - Sort and filter options
 
 ### ✅ Approval Workflow
-- Manager/Approver review pending requests
-- Timeline visualization of approval stages
-- Add approval/rejection remarks
-- Automatic PO generation on approval
-- Status tracking (Pending, Approved, Rejected)
+- **Multi-Stage Approval Process**
+  - Manager/Approver review system
+  - Visual timeline of approval stages:
+    1. RFQ Created
+    2. Quotation Selected
+    3. Approval Review (Current)
+    4. PO Generation
+  
+- **Approval Actions**
+  - Review complete quotation details
+  - Add approval remarks/comments
+  - Approve or reject with reasons
+  - Automatic PO generation on approval
+  - Email notifications (configurable)
+
+- **Status Management**
+  - Pending approvals list
+  - Approved requests archive
+  - Rejected requests with reasons
+  - Complete audit trail
 
 ### 📊 Purchase Orders & Invoicing
-- Auto-generate POs from approved quotations
-- Track PO status (In Progress, Completed, Cancelled)
-- Generate professional invoices with:
-  - Line item details
-  - Tax calculations (15%)
+- **Automated PO Generation**
+  - Auto-create POs from approved quotations
+  - Unique PO numbers
+  - Complete vendor and item details
+  - Tax calculations (15% default)
   - Subtotal and grand total
+  
+- **PO Status Tracking**
+  - In Progress: Order being fulfilled
+  - Completed: Order received
+  - Cancelled: Order cancelled
+
+- **Professional Invoices**
+  - Generate invoices from POs
+  - Company branding and logo
+  - Line item details with pricing
+  - Tax breakdown
   - Payment terms
-- **Print** or **Download as PDF**
-- **Email invoices** directly from the system
+  - **Export Options:**
+    - 📄 Download as PDF
+    - 🖨️ Print directly
+    - 📧 Email to vendor
+  - Clean, professional formatting
 
 ### 📈 Reports & Analytics
-- **Key Metrics Dashboard**:
-  - Total spend (YTD)
-  - Active vendors count
-  - Total orders
-  - Average order value
-- **Interactive Charts**:
-  - Monthly procurement trends
-  - Category distribution (Pie chart)
-  - Category spending overview (Bar chart)
-- **Vendor Performance Analytics**:
-  - Orders per vendor
-  - Total spend per vendor
-  - Average delivery time
-  - Vendor ratings
-- **Export Functionality**:
-  - **CSV Export**: Vendor performance data
-  - **PDF Export**: Complete analytics report
+- **Dashboard Metrics**
+  - 💰 Total Spend (Year-to-Date)
+  - 👥 Active Vendors Count
+  - 📦 Total Orders
+  - 📊 Average Order Value
 
-### 📜 Activity Logs
-- Comprehensive audit trail
-- Track all user actions with timestamps
-- Filter by action type and user
-- Search functionality
-- Real-time activity monitoring
+- **Interactive Charts**
+  - 📉 Monthly Procurement Trends (Line Chart)
+    - Spending over time
+    - Order volume trends
+  - 🥧 Category Distribution (Pie Chart)
+    - Spending by category
+    - Percentage breakdown
+  - 📊 Category Spending (Bar Chart)
+    - Category comparison
+    - Total amounts
+
+- **Vendor Performance Analytics**
+  - Complete vendor comparison table
+  - Metrics tracked:
+    - Total orders per vendor
+    - Total spend per vendor
+    - Average delivery time
+    - Vendor ratings (0-5 stars)
+    - Performance indicators
+  - Sort by any column
+  - Search and filter
+
+- **Export Capabilities**
+  - **CSV Export**: Vendor performance data for Excel
+  - **PDF Report**: Complete analytics report with:
+    - Key metrics summary
+    - All charts and graphs
+    - Vendor performance tables
+    - Professional formatting
+    - Company branding
+
+### 📜 Activity Logs & Audit Trail
+- **Comprehensive Logging**
+  - Every user action recorded
+  - Timestamp for each activity
+  - User identification
+  - Action description
+  - IP tracking (optional)
+
+- **Log Categories**
+  - Vendor Management
+  - RFQ Creation
+  - Quotation Submission
+  - Approval Actions
+  - Purchase Order Generation
+  - Invoice Creation
+  - User Authentication
+
+- **Search & Filter**
+  - Filter by action type
+  - Filter by user
+  - Date range selection
+  - Keyword search
+  - Export log data
 
 ### 🎨 Modern UI/UX
-- **Dark theme** for reduced eye strain
-- **Responsive design** for all devices
-- **Smooth animations** and transitions
-- **Card-based layouts** for better organization
-- **Interactive charts** with Recharts
-- **Loading states** and progress indicators
-- **Empty states** with helpful guidance
+- **Beautiful Dark Theme**
+  - Reduced eye strain
+  - Professional appearance
+  - High contrast for readability
+  - Consistent color palette
+
+- **Responsive Design**
+  - Mobile-first approach
+  - Works on tablets and phones
+  - Adaptive layouts
+  - Touch-friendly controls
+
+- **Interactive Elements**
+  - Smooth page transitions
+  - Loading states and spinners
+  - Hover effects
+  - Card-based layouts
+  - Modal dialogs
+  - Toast notifications
+
+- **User Experience**
+  - Intuitive navigation
+  - Clear call-to-action buttons
+  - Helpful empty states
+  - Error prevention
+  - Confirmation dialogs
+  - Keyboard shortcuts
 
 ---
 
@@ -193,32 +356,317 @@ A modern, full-stack procurement management system built with React, Vite, and S
 
 ---
 
-## 👥 User Roles
+## 👥 User Roles Explained
 
-### 1. **Procurement Officer**
-- Create and manage RFQs
-- Compare vendor quotations
-- Select winning vendors
-- View purchase orders
-- Access reports and analytics
+VendorBridge supports four distinct user roles, each with specific permissions and capabilities:
 
-### 2. **Vendor**
-- View available RFQs
-- Submit quotations
-- Track quotation status
-- View awarded contracts
+### 1. 👔 Procurement Officer
+**Primary Role:** Manages the procurement process
 
-### 3. **Manager/Approver**
-- Review approval requests
-- Approve or reject quotations
-- Add approval remarks
-- View approval history
+**Capabilities:**
+- ✅ Create and manage RFQs
+- ✅ Compare vendor quotations
+- ✅ Select winning vendors
+- ✅ View purchase orders and invoices
+- ✅ Access reports and analytics
+- ✅ Manage vendor database
+- ✅ View activity logs
 
-### 4. **Administrator**
-- Full system access
-- Manage users and vendors
-- System configuration
-- Access all reports
+**Dashboard Access:**
+- Create RFQ
+- Compare Quotes
+- Vendor Management
+- Purchase Orders
+- Reports & Analytics
+
+### 2. 🏢 Vendor
+**Primary Role:** Responds to RFQs with quotations
+
+**Capabilities:**
+- ✅ View all available RFQs
+- ✅ Submit quotations with pricing
+- ✅ Track quotation status
+- ✅ View awarded contracts
+- ✅ View own purchase orders
+- ❌ Cannot create RFQs
+- ❌ Cannot approve requests
+
+**Dashboard Access:**
+- Quotations (View & Submit)
+- Purchase Orders (Own only)
+- Activity Logs (Own only)
+
+### 3. 👨‍💼 Manager/Approver
+**Primary Role:** Reviews and approves procurement requests
+
+**Capabilities:**
+- ✅ Review approval requests
+- ✅ Approve or reject quotations
+- ✅ Add approval remarks
+- ✅ View approval history
+- ✅ View purchase orders
+- ✅ Access reports and analytics
+- ❌ Cannot create RFQs
+- ❌ Cannot submit quotations
+
+**Dashboard Access:**
+- Approvals (Review & Approve)
+- Purchase Orders (View All)
+- Reports & Analytics
+- Activity Logs
+
+### 4. 🔐 Administrator
+**Primary Role:** Full system access and management
+
+**Capabilities:**
+- ✅ All Procurement Officer permissions
+- ✅ All Manager permissions
+- ✅ User management
+- ✅ System configuration
+- ✅ Access all data
+- ✅ Manage vendors
+- ✅ Override permissions
+
+**Dashboard Access:**
+- Complete system access
+- All modules unlocked
+
+---
+
+## 🔄 Complete Workflow Guide
+
+### End-to-End Procurement Process
+
+This guide walks you through a complete procurement cycle from start to finish.
+
+#### **Phase 1: Vendor Setup** (One-time)
+
+1. **Login as Procurement Officer**
+   - Navigate to **Vendor Management**
+   - Click **"Add Vendor"**
+   - Fill in vendor details:
+     - Name: "Tech Solutions Ltd"
+     - Category: "IT & Hardware"
+     - Email: vendor@techsolutions.com
+     - Phone, GST Number, Address
+   - Click **"Add Vendor"**
+   - Repeat for multiple vendors
+
+#### **Phase 2: Create RFQ** (Officer)
+
+1. **Login as Procurement Officer**
+2. **Go to Dashboard → Create RFQ**
+3. **Fill Basic Information:**
+   ```
+   Title: "Laptop Purchase for Dev Team"
+   Category: "IT & Hardware"
+   Priority: "High"
+   Deadline: [Select date 10 days from now]
+   Description: "Need high-performance laptops for development team"
+   ```
+
+4. **Add Items:**
+   ```
+   Item 1:
+   - Product: "Dell XPS 15"
+   - Quantity: 10
+   - Unit: "pieces"
+   - Specifications: "16GB RAM, 512GB SSD, i7 processor"
+   ```
+   Click **"Add Item"** for more products
+
+5. **Select Vendors:**
+   - Check vendors who should receive this RFQ
+   - Select at least 2-3 vendors for competitive pricing
+
+6. **Click "Send RFQ to Vendors"**
+   - ✅ RFQ is created with status "Pending"
+   - ✅ Selected vendors can now see this RFQ
+
+#### **Phase 3: Submit Quotation** (Vendor)
+
+1. **Logout from Officer account**
+2. **Login as Vendor** (or signup as new vendor)
+3. **Go to Quotations → Submit Quotation**
+4. **You'll see available RFQs:**
+   ```
+   RFQ: Laptop Purchase for Dev Team
+   Due: [Deadline date]
+   Items: 1 items
+   ```
+
+5. **Click "Submit Quote"**
+6. **Enter Pricing for Each Item:**
+   ```
+   Dell XPS 15:
+   - Unit Price: $1,500
+   - Quantity: 10 (auto-filled)
+   - Total: $15,000 (auto-calculated)
+   ```
+
+7. **Add Delivery & Terms:**
+   ```
+   Delivery Timeline: "7-10 business days"
+   Validity Period: 30 days
+   Notes: "Includes 3-year warranty and free setup"
+   ```
+
+8. **Click "Submit Quotation"**
+   - ✅ Quotation submitted successfully
+   - ✅ Status changes to "Already Quoted"
+   - ✅ Officer can now see your quote
+
+#### **Phase 4: Compare Quotations** (Officer)
+
+1. **Logout from Vendor account**
+2. **Login as Procurement Officer**
+3. **Go to Compare Quotations**
+4. **Select RFQ:** "Laptop Purchase for Dev Team"
+5. **You'll see all submitted quotations:**
+   ```
+   Vendor A: $15,000 | 7-10 days | ⭐ 4.5
+   Vendor B: $14,500 | 10-14 days | ⭐ 4.2  [🏆 Best Price]
+   Vendor C: $15,800 | 5-7 days | ⭐ 4.8   [⚡ Fastest]
+   ```
+
+6. **Review Each Quotation:**
+   - Click to expand item-level details
+   - Compare pricing, delivery, ratings
+   - Read vendor notes
+
+7. **Select Winner:**
+   - Click **"Select This Quote"** on best option
+   - Confirm selection
+   - ✅ RFQ status changes to "In Review"
+   - ✅ Approval request is created
+
+#### **Phase 5: Approval Process** (Manager)
+
+1. **Logout from Officer account**
+2. **Login as Manager/Approver**
+3. **Go to Approval Workflow**
+4. **You'll see pending approvals:**
+   ```
+   RFQ: Laptop Purchase for Dev Team
+   Vendor: Vendor B
+   Amount: $14,500
+   Status: Pending
+   ```
+
+5. **Click "Review Details"**
+6. **Review Complete Information:**
+   - RFQ details
+   - Selected vendor
+   - Total amount
+   - Approval timeline:
+     ✅ RFQ Created
+     ✅ Quotation Selected
+     🔄 Approval Review (Current)
+     ⏳ PO Generation
+
+7. **Make Decision:**
+   
+   **Option A: Approve**
+   ```
+   Add Remarks: "Approved. Best value for money. Proceed with order."
+   Click "Approve Request"
+   ```
+   - ✅ Approval status: Approved
+   - ✅ Purchase Order auto-generated
+   - ✅ RFQ status: Approved
+
+   **Option B: Reject**
+   ```
+   Add Remarks: "Rejected. Price too high. Request re-quotation."
+   Click "Reject Request"
+   ```
+   - ❌ Approval status: Rejected
+   - ❌ RFQ status: Rejected
+   - ℹ️ Officer can start new comparison
+
+#### **Phase 6: Purchase Order** (Officer/Manager)
+
+1. **After Approval, go to Purchase Orders**
+2. **You'll see the generated PO:**
+   ```
+   PO #: PO-[ID]
+   Vendor: Vendor B
+   Amount: $14,500
+   Tax (15%): $2,175
+   Total: $16,675
+   Status: In Progress
+   ```
+
+3. **Generate Invoice:**
+   - Click "Generate Invoice"
+   - View professional invoice with:
+     - Company details
+     - Vendor details
+     - Line items
+     - Tax breakdown
+     - Payment terms
+
+4. **Export Options:**
+   - 📄 **Download PDF**: Click "Download Invoice"
+   - 🖨️ **Print**: Click "Print Invoice"
+   - 📧 **Email**: Click "Email Invoice"
+
+#### **Phase 7: Analytics & Reporting** (Any Role)
+
+1. **Go to Reports & Analytics**
+2. **View Key Metrics:**
+   - Total Spend: $16,675
+   - Active Vendors: 5
+   - Total Orders: 1
+   - Avg Order Value: $16,675
+
+3. **Explore Charts:**
+   - Monthly spending trends
+   - Category breakdown
+   - Vendor performance
+
+4. **Export Data:**
+   - **CSV**: Click "Export CSV" for Excel analysis
+   - **PDF Report**: Click "Export Report" for presentations
+
+#### **Phase 8: Activity Logs** (Audit)
+
+1. **Go to Activity Logs**
+2. **View Complete Audit Trail:**
+   ```
+   [2026-06-06 10:30] Officer | RFQ Created | Laptop Purchase
+   [2026-06-06 14:20] Vendor | Quotation Submitted | $14,500
+   [2026-06-06 15:45] Officer | Quotation Selected | Vendor B
+   [2026-06-06 16:10] Manager | Approval Granted | $16,675
+   [2026-06-06 16:12] System | PO Generated | PO-12345
+   ```
+
+3. **Filter & Search:**
+   - Filter by action type
+   - Search by user or description
+   - Export log data
+
+---
+
+### 🎯 Common Workflows
+
+#### Quick Vendor Comparison
+```
+1. Create RFQ → 2. Multiple Vendors Quote → 3. Compare → 4. Select Best
+Time: 2-5 days
+```
+
+#### Emergency Procurement
+```
+1. Create RFQ (Priority: Urgent) → 2. Single Vendor Quote → 3. Quick Approval
+Time: Same day possible
+```
+
+#### Recurring Orders
+```
+1. Use Previous RFQ Template → 2. Update Quantities → 3. Send to Same Vendors
+Time: 30 minutes
+```
 
 ---
 
@@ -482,7 +930,69 @@ vendorbridge/
 
 ## 🚀 Deployment
 
-### Deploy to Netlify
+### Deploy to Vercel (Recommended)
+
+Vercel provides the best hosting experience for React applications with automatic deployments.
+
+#### Method 1: Deploy from GitHub (Automated)
+
+1. **Push your code to GitHub**
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin https://github.com/yourusername/vendorbridge.git
+   git push -u origin main
+   ```
+
+2. **Connect to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Click "New Project"
+   - Import your GitHub repository
+   - Vercel auto-detects Vite configuration
+
+3. **Configure Environment Variables**
+   - Add these in Vercel dashboard:
+   ```
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. **Deploy**
+   - Click "Deploy"
+   - Vercel builds and deploys automatically
+   - Get your live URL: `https://your-project.vercel.app`
+
+#### Method 2: Deploy via Vercel CLI
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+#### Method 3: Manual Deployment
+
+1. **Build the project**
+   ```bash
+   npm run build
+   ```
+
+2. **Deploy dist folder**
+   - Drag and drop `dist` folder to Vercel dashboard
+   - Or use Vercel CLI: `vercel --prod dist`
+
+### Deploy to Netlify (Alternative)
+
+#### Via Netlify Dashboard
 
 1. **Build the project**
    ```bash
@@ -490,29 +1000,243 @@ vendorbridge/
    ```
 
 2. **Deploy to Netlify**
-   - Connect your GitHub repository to Netlify
-   - Or drag and drop the `dist` folder to Netlify
-   - Set build command: `npm run build`
-   - Set publish directory: `dist`
+   - Go to [netlify.com](https://netlify.com)
+   - Drag and drop `dist` folder
+   - Or connect GitHub repository
 
-3. **Configure Environment Variables**
-   
-   In Netlify dashboard, add:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+3. **Configure**
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+   - Add environment variables
 
-4. **Update Supabase Settings**
-   - Set Site URL to your Netlify URL
-   - Update redirect URLs
+4. **Set up redirects**
+   - File already included: `public/_redirects`
+   - Contains: `/* /index.html 200`
 
-### Manual Deployment
+### Post-Deployment Configuration
+
+1. **Update Supabase Settings**
+   - Go to Supabase Dashboard
+   - Navigate to Authentication → URL Configuration
+   - Set **Site URL**: `https://your-app.vercel.app`
+   - Add **Redirect URLs**:
+     ```
+     https://your-app.vercel.app/*
+     https://your-app.vercel.app/#/reset-password
+     ```
+
+2. **Test the Application**
+   - Visit your deployed URL
+   - Test login/signup
+   - Test password reset flow
+   - Test all major features
+
+3. **Custom Domain (Optional)**
+   - Add custom domain in Vercel/Netlify
+   - Update DNS records
+   - Update Supabase URLs
+   - Force HTTPS
+
+### Continuous Deployment
+
+With Vercel/Netlify connected to GitHub:
 
 ```bash
-# Build
-npm run build
+# Make changes
+git add .
+git commit -m "Update features"
+git push origin main
 
-# Deploy dist folder to your hosting provider
+# Auto-deploys to production!
 ```
+
+---
+
+## 📱 Usage Guide
+
+### For Procurement Officers
+
+#### Creating Your First RFQ
+
+1. **Login** with officer credentials
+2. **Click "Create RFQ"** from dashboard
+3. **Fill RFQ details** - be specific with requirements
+4. **Add multiple items** - use "+ Add Item" button
+5. **Select vendors** - choose at least 2-3 for comparison
+6. **Submit** - vendors are notified automatically
+
+**Pro Tips:**
+- Set realistic deadlines (5-10 business days)
+- Be detailed in specifications
+- Use High/Urgent priority sparingly
+- Select vendors from appropriate categories
+
+#### Comparing Quotations
+
+1. **Wait for vendors** to submit quotes
+2. **Go to Compare Quotations**
+3. **Select your RFQ** from dropdown
+4. **Review quotes** side-by-side
+5. **Check for:**
+   - 🏆 Best price indicator
+   - ⚡ Fastest delivery indicator
+   - ⭐ Vendor ratings
+6. **Click "Select This Quote"** on winner
+7. **Approval request** created automatically
+
+### For Vendors
+
+#### Submitting Competitive Quotes
+
+1. **Login** as vendor
+2. **Go to Quotations**
+3. **Browse available RFQs**
+4. **Click "Submit Quote"**
+5. **Enter competitive pricing**
+6. **Specify delivery timeline**
+7. **Add value-adds** in notes (warranty, support, etc.)
+8. **Submit** before deadline
+
+**Pro Tips:**
+- Be competitive but realistic
+- Include all costs in pricing
+- Mention added value (warranty, support)
+- Respond quickly (early submissions stand out)
+- Be clear about delivery timelines
+
+### For Managers
+
+#### Efficient Approval Process
+
+1. **Check Approvals** page regularly
+2. **Review request details** thoroughly
+3. **Consider:**
+   - Budget compliance
+   - Vendor reliability
+   - Delivery timeline
+   - Total cost (including tax)
+4. **Add meaningful remarks**
+5. **Approve or reject** with reasons
+
+**Pro Tips:**
+- Set up email notifications
+- Review within 24-48 hours
+- Provide clear rejection reasons
+- Check vendor ratings
+- Consider past performance
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues & Solutions
+
+#### Issue: "Error loading vendors"
+
+**Cause:** Database permissions or RLS policies
+
+**Solution:**
+```sql
+-- Check if RLS is enabled
+SELECT * FROM pg_tables WHERE tablename = 'vendors';
+
+-- Verify RLS policies allow SELECT
+SELECT * FROM vendors; -- Should work
+
+-- If fails, check Supabase Dashboard → Authentication
+```
+
+#### Issue: "No pending approvals" showing
+
+**Cause:** Approval not created yet
+
+**Solution:**
+1. Verify quotation was submitted
+2. Verify officer selected winning quote
+3. Check if you're logged in as Manager role
+4. Check browser console for errors
+
+**Workflow Check:**
+```
+✅ RFQ Created
+✅ Vendor Submitted Quote
+❓ Officer Selected Winner? ← Check this step
+❌ Approval not yet created
+```
+
+#### Issue: "Quotation not showing for vendor"
+
+**Cause:** RFQ status or vendor not selected
+
+**Solution:**
+1. Check RFQ status is "pending" or "in_review"
+2. Verify RFQ deadline hasn't passed
+3. Clear browser cache
+4. Check if already quoted (shows "Already Quoted")
+
+#### Issue: "CSV/PDF export not downloading"
+
+**Cause:** Browser blocking download or no data
+
+**Solution:**
+1. Check if data exists (vendor performance)
+2. Allow pop-ups for PDF export
+3. Check browser console for errors
+4. Try different browser
+
+#### Issue: "Login not working"
+
+**Cause:** Wrong credentials or Supabase connection
+
+**Solution:**
+1. Verify email and password
+2. Check Supabase is running
+3. Verify environment variables
+4. Check browser console
+5. Try password reset
+
+#### Issue: "Build fails"
+
+**Cause:** Missing dependencies or environment variables
+
+**Solution:**
+```bash
+# Clear cache
+rm -rf node_modules
+rm package-lock.json
+
+# Reinstall
+npm install
+
+# Verify env file
+cat .env.local
+
+# Build again
+npm run build
+```
+
+### Debug Mode
+
+Enable console logging:
+
+1. **Open browser console** (F12)
+2. **Check for logs:**
+   ```
+   Fetching vendors...
+   Vendors fetched: [array]
+   ```
+3. **Look for red errors**
+4. **Check Network tab** for failed API calls
+
+### Getting Help
+
+If you're still stuck:
+
+1. **Check browser console** for detailed errors
+2. **Check Supabase logs** in dashboard
+3. **Verify all environment variables**
+4. **Review database table structure**
+5. **Check RLS policies** in Supabase
 
 ---
 
@@ -587,25 +1311,55 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- **Supabase** for the excellent BaaS platform
-- **Recharts** for beautiful data visualizations
-- **Lucide** for the comprehensive icon library
-- **Netlify** for seamless deployment
+- **Supabase** - Excellent Backend-as-a-Service platform
+- **Recharts** - Beautiful and customizable data visualizations
+- **Lucide React** - Comprehensive and beautiful icon library
+- **Vercel** - Lightning-fast deployment and hosting
+- **React** - Powerful UI library
+- **Vite** - Next-generation frontend tooling
 
 ---
 
-## 📞 Support
+## 📞 Support & Contact
 
-For support, email support@vendorbridge.com or open an issue in the repository.
+- **Live Demo:** [https://vendorbridge-lilac.vercel.app/](https://vendorbridge-lilac.vercel.app/)
+- **Issues:** Open an issue on GitHub
+- **Email:** support@vendorbridge.com
+- **Documentation:** This README
 
 ---
 
-## 🌟 Star History
+## 🌟 Show Your Support
 
-If you find this project useful, please consider giving it a ⭐️!
+If you find VendorBridge useful, please consider:
+
+- ⭐ **Starring** the repository
+- 🍴 **Forking** for your own projects
+- 🐛 **Reporting bugs** and issues
+- 💡 **Suggesting** new features
+- 📝 **Contributing** code improvements
+
+---
+
+## 📊 Project Stats
+
+![GitHub stars](https://img.shields.io/github/stars/yourusername/vendorbridge?style=social)
+![GitHub forks](https://img.shields.io/github/forks/yourusername/vendorbridge?style=social)
+![GitHub issues](https://img.shields.io/github/issues/yourusername/vendorbridge)
+![GitHub license](https://img.shields.io/github/license/yourusername/vendorbridge)
 
 ---
 
 **Built with ❤️ using React, Vite, and Supabase**
 
-**Live Demo:** [https://vendorbridgehackathon.netlify.app/](https://vendorbridgehackathon.netlify.app/)
+**🔗 Live Application:** [https://vendorbridge-lilac.vercel.app/](https://vendorbridge-lilac.vercel.app/)
+
+**📅 Last Updated:** June 2026
+
+---
+
+<div align="center">
+  <strong>VendorBridge</strong> - Streamlining Procurement, One RFQ at a Time
+  <br><br>
+  Made with 💼 for modern procurement teams
+</div>
