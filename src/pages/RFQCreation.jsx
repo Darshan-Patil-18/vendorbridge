@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { Plus, X, Upload, Calendar, Send, Save, Trash2, User } from 'lucide-react';
+import { Plus, X, Calendar, Send, Save, Trash2, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { logActivity } from '../lib/utils';
@@ -25,7 +25,6 @@ function RFQCreation({ user, onLogout }) {
   ]);
 
   const [selectedVendors, setSelectedVendors] = useState([]);
-  const [attachments, setAttachments] = useState([]);
 
   useEffect(() => {
     fetchVendors();
@@ -81,15 +80,6 @@ function RFQCreation({ user, onLogout }) {
     } else {
       setSelectedVendors([...selectedVendors, vendorId]);
     }
-  };
-
-  const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    setAttachments([...attachments, ...files.map(f => ({ id: Date.now() + Math.random(), name: f.name }))]);
-  };
-
-  const removeAttachment = (id) => {
-    setAttachments(attachments.filter(a => a.id !== id));
   };
 
   const handleSubmit = async (e) => {
@@ -387,37 +377,6 @@ function RFQCreation({ user, onLogout }) {
                   <Plus size={18} />
                   Add Vendors
                 </Link>
-              </div>
-            )}
-          </div>
-
-          <div className="form-section">
-            <h3>Attachments</h3>
-            <div className="upload-area">
-              <input
-                type="file"
-                id="fileUpload"
-                multiple
-                onChange={handleFileUpload}
-                style={{ display: 'none' }}
-              />
-              <label htmlFor="fileUpload" className="upload-label">
-                <Upload size={32} />
-                <p>Click to upload files</p>
-                <span>PDF, DOC, XLS, Images (Max 10MB)</span>
-              </label>
-            </div>
-
-            {attachments.length > 0 && (
-              <div className="attachments-list">
-                {attachments.map((file) => (
-                  <div key={file.id} className="attachment-item">
-                    <span>{file.name}</span>
-                    <button type="button" onClick={() => removeAttachment(file.id)}>
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
               </div>
             )}
           </div>
