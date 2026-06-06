@@ -5,7 +5,49 @@
   justify-content: center;
   padding: 20px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Flip Animation Container */
+.flip-container {
+  perspective: 2000px;
+  width: 100%;
+  max-width: 600px;
+  position: relative;
+  z-index: 10;
+}
+
+.flipper {
+  position: relative;
+  width: 100%;
+  height: var(--flipper-height, auto);
+  min-height: 400px;
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease-in-out, height 0.6s ease-in-out;
+}
+
+.flip-container.flipped .flipper {
+  transform: rotateY(180deg);
+}
+
+.flip-front,
+.flip-back {
+  width: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.flip-front {
+  z-index: 2;
+  transform: rotateY(0deg);
+}
+
+.flip-back {
+  transform: rotateY(180deg);
 }
 
 .auth-card {
@@ -73,7 +115,7 @@
 
 .form-options {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 24px;
 }
@@ -120,34 +162,6 @@
   justify-content: center;
   padding: 14px 24px;
   font-size: 16px;
-}
-
-.quick-login {
-  margin: 24px 0;
-  padding: 20px;
-  background: var(--dark-bg);
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-}
-
-.quick-login-title {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.quick-login-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.btn-sm {
-  padding: 8px 16px;
-  font-size: 13px;
 }
 
 .auth-footer {
@@ -233,10 +247,6 @@
     grid-template-columns: 1fr;
   }
 
-  .quick-login-buttons {
-    grid-template-columns: 1fr;
-  }
-
   .auth-header h1 {
     font-size: 24px;
   }
@@ -250,4 +260,53 @@
     width: 32px;
     height: 32px;
   }
+
+  .flip-container {
+    max-width: 100%;
+  }
+}
+
+/* Spinner for loading states */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Password input wrapper for eye toggle */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .form-control {
+  padding-right: 45px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.password-toggle:hover {
+  color: var(--text-primary);
 }

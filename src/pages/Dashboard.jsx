@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { 
   TrendingUp, 
@@ -13,79 +14,166 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { supabase } from '../lib/supabase';
+import { formatDate } from '../lib/utils';
 import './Dashboard.css';
 
 function Dashboard({ user, onLogout }) {
-  // Sample data
-  const stats = [
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState([
     {
       label: 'Total RFQs',
-      value: '156',
-      change: '+12%',
-      trend: 'up',
+      value: '0',
       icon: FileText,
       color: 'primary'
     },
     {
       label: 'Pending Approvals',
-      value: '23',
-      change: '+5',
-      trend: 'up',
+      value: '0',
       icon: Clock,
       color: 'warning'
     },
     {
       label: 'Active Vendors',
-      value: '89',
-      change: '+8',
-      trend: 'up',
+      value: '0',
       icon: Users,
       color: 'success'
     },
     {
       label: 'Total Spend',
-      value: '$2.4M',
-      change: '+18%',
-      trend: 'up',
+      value: '$0',
       icon: DollarSign,
       color: 'info'
     }
-  ];
+  ]);
 
-  const recentRFQs = [
-    { id: 'RFQ-001', title: 'Office Supplies Q1 2026', status: 'pending', deadline: '2026-06-15', vendors: 5 },
-    { id: 'RFQ-002', title: 'IT Hardware Procurement', status: 'in_review', deadline: '2026-06-20', vendors: 8 },
-    { id: 'RFQ-003', title: 'Marketing Services', status: 'approved', deadline: '2026-06-10', vendors: 3 },
-    { id: 'RFQ-004', title: 'Facility Maintenance', status: 'pending', deadline: '2026-06-25', vendors: 6 },
-  ];
+  const [recentRFQs, setRecentRFQs] = useState([]);
+  const [recentPOs, setRecentPOs] = useState([]);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [monthlySpend, setMonthlySpend] = useState([]);
+  const [categorySpend, setCategorySpend] = useState([]);
 
-  const recentPOs = [
-    { id: 'PO-2024-001', vendor: 'Tech Solutions Inc', amount: '$45,000', date: '2026-06-05', status: 'completed' },
-    { id: 'PO-2024-002', vendor: 'Office Mart', amount: '$12,500', date: '2026-06-04', status: 'in_progress' },
-    { id: 'PO-2024-003', vendor: 'Global Suppliers', amount: '$28,900', date: '2026-06-03', status: 'completed' },
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const pendingApprovals = [
-    { id: 'APP-001', rfq: 'RFQ-001', amount: '$34,500', submittedBy: 'John Doe', date: '2026-06-05' },
-    { id: 'APP-002', rfq: 'RFQ-004', amount: '$67,200', submittedBy: 'Jane Smith', date: '2026-06-04' },
-    { id: 'APP-003', rfq: 'RFQ-007', amount: '$21,800', submittedBy: 'Mike Johnson', date: '2026-06-03' },
-  ];
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all data in parallel
+      const [
+        rfqsCount,
+        pendingApprovalsCount,
+        activeVendorsCount,
+        totalSpendData,
+        rfqsData,
+        posData,
+        approvalsData,
+        monthlySpendData
+      ] = await Promise.all([
+        supabase.from('rfqs').select('id', { count: 'exact', head: true }),
+        supabase.from('approvals').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('purchase_orders').select('total'),
+        supabase.from('rfqs').select('*').order('created_at', { ascending: false }).limit(5),
+        supabase.from('purchase_orders').select('*').order('created_at', { ascending: false }).limit(5),
+        supabase.from('approvals').select('*, rfqs(title), quotations(vendor_name, total_amount)').eq('status', 'pending').limit(5),
+        supabase.from('purchase_orders').select('total, created_at').order('created_at', { ascending: false })
+      ]);
 
-  const monthlySpend = [
-    { month: 'Jan', amount: 180000 },
-    { month: 'Feb', amount: 220000 },
-    { month: 'Mar', amount: 195000 },
-    { month: 'Apr', amount: 245000 },
-    { month: 'May', amount: 210000 },
-    { month: 'Jun', amount: 240000 },
-  ];
+      // Calculate total spend
+      const totalSpend = totalSpendData.data?.reduce((sum, po) => sum + (Number(po.total) || 0), 0) || 0;
 
-  const categorySpend = [
-    { name: 'IT & Hardware', value: 450000 },
-    { name: 'Office Supplies', value: 180000 },
-    { name: 'Services', value: 320000 },
-    { name: 'Maintenance', value: 150000 },
-  ];
+      // Update stats
+      setStats([
+        {
+          label: 'Total RFQs',
+          value: rfqsCount.count?.toString() || '0',
+          icon: FileText,
+          color: 'primary'
+        },
+        {
+          label: 'Pending Approvals',
+          value: pendingApprovalsCount.count?.toString() || '0',
+          icon: Clock,
+          color: 'warning'
+        },
+        {
+          label: 'Active Vendors',
+          value: activeVendorsCount.count?.toString() || '0',
+          icon: Users,
+          color: 'success'
+        },
+        {
+          label: 'Total Spend',
+          value: `$${totalSpend.toLocaleString()}`,
+          icon: DollarSign,
+          color: 'info'
+        }
+      ]);
+
+      // Set recent RFQs
+      setRecentRFQs(rfqsData.data?.map(rfq => ({
+        id: rfq.id.substring(0, 8),
+        title: rfq.title,
+        status: rfq.status,
+        deadline: formatDate(rfq.deadline),
+        vendors: rfq.selected_vendors?.length || 0
+      })) || []);
+
+      // Set recent POs
+      setRecentPOs(posData.data?.map(po => ({
+        id: po.id.substring(0, 8),
+        vendor: po.vendor_name,
+        amount: `$${Number(po.total).toLocaleString()}`,
+        date: formatDate(po.created_at),
+        status: po.status
+      })) || []);
+
+      // Set pending approvals
+      setPendingApprovals(approvalsData.data?.map(approval => ({
+        id: approval.id.substring(0, 8),
+        rfq: approval.rfqs?.title || 'N/A',
+        amount: `$${Number(approval.quotations?.total_amount || 0).toLocaleString()}`,
+        submittedBy: approval.quotations?.vendor_name || 'Unknown',
+        date: formatDate(approval.created_at)
+      })) || []);
+
+      // Calculate monthly spend (last 6 months)
+      if (monthlySpendData.data && monthlySpendData.data.length > 0) {
+        const monthlyData = {};
+        monthlySpendData.data.forEach(po => {
+          const date = new Date(po.created_at);
+          const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+          monthlyData[monthKey] = (monthlyData[monthKey] || 0) + Number(po.total);
+        });
+
+        const chartData = Object.entries(monthlyData)
+          .slice(-6)
+          .map(([month, amount]) => ({ month, amount }));
+        setMonthlySpend(chartData);
+      }
+
+      // Calculate category spend
+      const { data: vendorsData } = await supabase.from('vendors').select('category');
+      if (vendorsData) {
+        const categoryData = {};
+        vendorsData.forEach(vendor => {
+          const cat = vendor.category || 'Other';
+          categoryData[cat] = (categoryData[cat] || 0) + 1;
+        });
+
+        const chartData = Object.entries(categoryData).map(([name, value]) => ({ name, value }));
+        setCategorySpend(chartData);
+      }
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -118,27 +206,30 @@ function Dashboard({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="stats-grid">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <div key={index} className={`stat-card stat-${stat.color}`}>
-                <div className="stat-icon">
-                  <Icon size={24} />
-                </div>
-                <div className="stat-content">
-                  <p className="stat-label">{stat.label}</p>
-                  <h3 className="stat-value">{stat.value}</h3>
-                  <div className="stat-change positive">
-                    <TrendingUp size={14} />
-                    <span>{stat.change} from last month</span>
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Loading dashboard...</p>
+          </div>
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <div className="stats-grid">
+              {stats.map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <div key={index} className={`stat-card stat-${stat.color}`}>
+                    <div className="stat-icon">
+                      <Icon size={24} />
+                    </div>
+                    <div className="stat-content">
+                      <p className="stat-label">{stat.label}</p>
+                      <h3 className="stat-value">{stat.value}</h3>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
 
         {/* Charts Section */}
         <div className="charts-grid">
@@ -148,18 +239,25 @@ function Dashboard({ user, onLogout }) {
               <span className="chart-subtitle">Last 6 months</span>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlySpend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="month" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip 
-                    contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                    labelStyle={{ color: '#f1f5f9' }}
-                  />
-                  <Bar dataKey="amount" fill="#2563eb" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {monthlySpend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={monthlySpend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis dataKey="month" stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" />
+                    <Tooltip 
+                      contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                      labelStyle={{ color: '#f1f5f9' }}
+                    />
+                    <Bar dataKey="amount" fill="#2563eb" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="empty-state">
+                  <FileText size={48} />
+                  <p>No spending data yet</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -169,27 +267,34 @@ function Dashboard({ user, onLogout }) {
               <span className="chart-subtitle">Current fiscal year</span>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categorySpend}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categorySpend.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              {categorySpend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={categorySpend}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {categorySpend.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="empty-state">
+                  <FileText size={48} />
+                  <p>No category data yet</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -202,34 +307,46 @@ function Dashboard({ user, onLogout }) {
               <h3>Recent RFQs</h3>
               <Link to="/rfq/create" className="view-all">View All <ArrowUpRight size={16} /></Link>
             </div>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>RFQ ID</th>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Deadline</th>
-                    <th>Vendors</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentRFQs.map((rfq) => (
-                    <tr key={rfq.id}>
-                      <td><strong>{rfq.id}</strong></td>
-                      <td>{rfq.title}</td>
-                      <td>
-                        <span className={`badge badge-${getStatusBadge(rfq.status)}`}>
-                          {rfq.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td>{rfq.deadline}</td>
-                      <td>{rfq.vendors} vendors</td>
+            {recentRFQs.length > 0 ? (
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>RFQ ID</th>
+                      <th>Title</th>
+                      <th>Status</th>
+                      <th>Deadline</th>
+                      <th>Vendors</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {recentRFQs.map((rfq) => (
+                      <tr key={rfq.id}>
+                        <td><strong>{rfq.id}</strong></td>
+                        <td>{rfq.title}</td>
+                        <td>
+                          <span className={`badge badge-${getStatusBadge(rfq.status)}`}>
+                            {rfq.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td>{rfq.deadline}</td>
+                        <td>{rfq.vendors} vendors</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <FileText size={48} />
+                <h3>No RFQs yet</h3>
+                <p>Create your first RFQ to get started</p>
+                <Link to="/rfq/create" className="btn btn-primary">
+                  <Plus size={18} />
+                  Create RFQ
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Pending Approvals */}
@@ -239,23 +356,31 @@ function Dashboard({ user, onLogout }) {
                 <h3>Pending Approvals</h3>
                 <Link to="/approvals" className="view-all">View All <ArrowUpRight size={16} /></Link>
               </div>
-              <div className="approval-list">
-                {pendingApprovals.map((approval) => (
-                  <div key={approval.id} className="approval-item">
-                    <div className="approval-icon">
-                      <AlertCircle size={20} />
+              {pendingApprovals.length > 0 ? (
+                <div className="approval-list">
+                  {pendingApprovals.map((approval) => (
+                    <div key={approval.id} className="approval-item">
+                      <div className="approval-icon">
+                        <AlertCircle size={20} />
+                      </div>
+                      <div className="approval-info">
+                        <h4>{approval.rfq}</h4>
+                        <p>Amount: {approval.amount} • By: {approval.submittedBy}</p>
+                        <span className="approval-date">{approval.date}</span>
+                      </div>
+                      <div className="approval-actions">
+                        <button className="btn btn-sm btn-secondary">Review</button>
+                      </div>
                     </div>
-                    <div className="approval-info">
-                      <h4>{approval.rfq}</h4>
-                      <p>Amount: {approval.amount} • By: {approval.submittedBy}</p>
-                      <span className="approval-date">{approval.date}</span>
-                    </div>
-                    <div className="approval-actions">
-                      <button className="btn btn-sm btn-secondary">Review</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <CheckCircle size={48} />
+                  <h3>No pending approvals</h3>
+                  <p>All caught up!</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -265,34 +390,42 @@ function Dashboard({ user, onLogout }) {
               <h3>Recent Purchase Orders</h3>
               <Link to="/purchase-orders" className="view-all">View All <ArrowUpRight size={16} /></Link>
             </div>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>PO Number</th>
-                    <th>Vendor</th>
-                    <th>Amount</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentPOs.map((po) => (
-                    <tr key={po.id}>
-                      <td><strong>{po.id}</strong></td>
-                      <td>{po.vendor}</td>
-                      <td><strong>{po.amount}</strong></td>
-                      <td>{po.date}</td>
-                      <td>
-                        <span className={`badge badge-${getStatusBadge(po.status)}`}>
-                          {po.status.replace('_', ' ')}
-                        </span>
-                      </td>
+            {recentPOs.length > 0 ? (
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>PO Number</th>
+                      <th>Vendor</th>
+                      <th>Amount</th>
+                      <th>Date</th>
+                      <th>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {recentPOs.map((po) => (
+                      <tr key={po.id}>
+                        <td><strong>{po.id}</strong></td>
+                        <td>{po.vendor}</td>
+                        <td><strong>{po.amount}</strong></td>
+                        <td>{po.date}</td>
+                        <td>
+                          <span className={`badge badge-${getStatusBadge(po.status)}`}>
+                            {po.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <ShoppingCart size={48} />
+                <h3>No purchase orders yet</h3>
+                <p>Purchase orders will appear here once approved</p>
+              </div>
+            )}
           </div>
 
           {/* Quick Actions */}
@@ -319,7 +452,9 @@ function Dashboard({ user, onLogout }) {
               </Link>
             </div>
           </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </Layout>
   );

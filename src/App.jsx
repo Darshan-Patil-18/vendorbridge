@@ -1,8 +1,9 @@
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
 import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
+import Auth from './pages/Auth';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import VendorManagement from './pages/VendorManagement';
 import RFQCreation from './pages/RFQCreation';
@@ -19,22 +20,96 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem('vendorBridgeUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Check for active Supabase session
+    checkSession();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const checkSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error checking session:', error);
+      setIsLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async (userId) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!profile) {
+        // Profile not found, redirect to login
+        console.warn('Profile not found for user:', userId);
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const userData = {
+        id: profile.id,
+        name: profile.full_name,
+        email: profile.email,
+        role: profile.role,
+        organization: profile.organization
+      };
+
+      setUser(userData);
+      
+      // Store in localStorage for quick access
+      localStorage.setItem('userId', userData.id);
+      localStorage.setItem('userName', userData.name);
+      localStorage.setItem('userEmail', userData.email);
+      localStorage.setItem('userRole', userData.role);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = (userData) => {
     setUser(userData);
-    localStorage.setItem('vendorBridgeUser', JSON.stringify(userData));
+    localStorage.setItem('userId', userData.id);
+    localStorage.setItem('userName', userData.name);
+    localStorage.setItem('userEmail', userData.email);
+    localStorage.setItem('userRole', userData.role);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('vendorBridgeUser');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userRole');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   if (isLoading) {
@@ -52,11 +127,15 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route 
           path="/login" 
-          element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" />} 
+          element={!user ? <Auth onLogin={handleLogin} /> : <Navigate to="/dashboard" />} 
         />
         <Route 
           path="/signup" 
-          element={!user ? <Signup onLogin={handleLogin} /> : <Navigate to="/dashboard" />} 
+          element={!user ? <Auth onLogin={handleLogin} /> : <Navigate to="/dashboard" />} 
+        />
+        <Route 
+          path="/reset-password" 
+          element={<ResetPassword />} 
         />
         <Route 
           path="/dashboard" 

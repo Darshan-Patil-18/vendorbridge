@@ -1,45 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Download, Mail, Printer, Eye, FileText, CheckCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { supabase } from '../lib/supabase';
+import { logActivity, formatDate } from '../lib/utils';
 import './SharedPages.css';
 
 function PurchaseOrderInvoice({ user, onLogout }) {
-  const [orders, setOrders] = useState([
-    {
-      id: 'PO-2026-001',
-      rfqId: 'RFQ-001',
-      vendor: 'Global Suppliers',
-      amount: 11800,
-      tax: 1770,
-      total: 13570,
-      date: '2026-06-06',
-      status: 'completed',
-      items: [
-        { product: 'Printer Paper A4', quantity: 100, unit: 'boxes', unitPrice: 42, total: 4200 },
-        { product: 'Gel Pens', quantity: 500, unit: 'pieces', unitPrice: 15.2, total: 7600 }
-      ],
-      deliveryAddress: '123 Business Plaza, New York, NY 10001',
-      invoiceGenerated: true
-    },
-    {
-      id: 'PO-2026-002',
-      rfqId: 'RFQ-002',
-      vendor: 'Tech Solutions Inc',
-      amount: 45000,
-      tax: 6750,
-      total: 51750,
-      date: '2026-06-05',
-      status: 'in_progress',
-      items: [
-        { product: 'Laptop Dell XPS 15', quantity: 20, unit: 'units', unitPrice: 2000, total: 40000 },
-        { product: 'Wireless Mouse', quantity: 50, unit: 'pieces', unitPrice: 100, total: 5000 }
-      ],
-      deliveryAddress: '123 Business Plaza, New York, NY 10001',
-      invoiceGenerated: false
-    }
-  ]);
-
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailData, setEmailData] = useState({
@@ -47,6 +16,52 @@ function PurchaseOrderInvoice({ user, onLogout }) {
     subject: '',
     message: ''
   });
+
+  useEffect(() => {
+    fetchPurchaseOrders();
+  }, []);
+
+  const fetchPurchaseOrders = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: posData, error: posError } = await supabase
+        .from('purchase_orders')
+        .select('*, rfqs(id, title), quotations(quotation_items(*))')
+        .order('created_at', { ascending: false });
+
+      if (posError) throw posError;
+
+      const ordersList = posData.map(po => ({
+        id: po.id.substring(0, 8),
+        fullId: po.id,
+        rfqId: po.rfqs?.id?.substring(0, 8) || 'N/A',
+        rfqTitle: po.rfqs?.title || 'N/A',
+        vendor: po.vendor_name,
+        amount: Number(po.amount),
+        tax: Number(po.tax),
+        total: Number(po.total),
+        date: formatDate(po.created_at),
+        status: po.status,
+        invoiceGenerated: po.invoice_generated,
+        deliveryAddress: '123 Business St, City, Country',
+        items: po.quotations?.quotation_items?.map(item => ({
+          product: item.product_name,
+          quantity: item.quantity,
+          unit: item.unit,
+          unitPrice: Number(item.unit_price),
+          total: Number(item.total)
+        })) || []
+      }));
+
+      setOrders(ordersList);
+    } catch (error) {
+      console.error('Error fetching purchase orders:', error);
+      alert('Error loading purchase orders');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const generatePDF = (order) => {
     const doc = new jsPDF();
@@ -150,11 +165,30 @@ function PurchaseOrderInvoice({ user, onLogout }) {
     setShowEmailModal(false);
   };
 
-  const handleGenerateInvoice = (orderId) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, invoiceGenerated: true } : order
-    ));
-    alert(`Invoice generated for ${orderId}!`);
+  const handleGenerateInvoice = async (orderId) => {
+    try {
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({ invoice_generated: true })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // Log activity
+      const order = orders.find(o => o.fullId === orderId);
+      await logActivity(
+        user.id,
+        user.name,
+        'Invoice Generated',
+        `Generated invoice for PO: ${order?.id} - Vendor: ${order?.vendor}`
+      );
+
+      alert(`Invoice generated for ${order?.id}!`);
+      await fetchPurchaseOrders();
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      alert('Error generating invoice. Please try again.');
+    }
   };
 
   return (
@@ -167,8 +201,20 @@ function PurchaseOrderInvoice({ user, onLogout }) {
           </div>
         </div>
 
-        <div className="orders-list">
-          {orders.map((order) => (
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Loading purchase orders...</p>
+          </div>
+        ) : orders.length === 0 ? (
+          <div className="empty-state">
+            <FileText size={48} />
+            <h3>No purchase orders yet</h3>
+            <p>Purchase orders will appear here once RFQ quotations are approved</p>
+          </div>
+        ) : (
+          <div className="orders-list">
+            {orders.map((order) => (
             <div key={order.id} className="order-card card">
               <div className="order-header">
                 <div>
@@ -227,7 +273,7 @@ function PurchaseOrderInvoice({ user, onLogout }) {
                 </button>
                 
                 {!order.invoiceGenerated && (
-                  <button className="btn btn-sm btn-secondary" onClick={() => handleGenerateInvoice(order.id)}>
+                  <button className="btn btn-sm btn-secondary" onClick={() => handleGenerateInvoice(order.fullId)}>
                     <FileText size={16} />
                     Generate Invoice
                   </button>
@@ -249,8 +295,9 @@ function PurchaseOrderInvoice({ user, onLogout }) {
                 </button>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Order Details Modal */}
         {selectedOrder && !showEmailModal && (

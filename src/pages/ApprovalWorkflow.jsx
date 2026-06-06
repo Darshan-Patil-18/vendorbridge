@@ -1,91 +1,187 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { CheckCircle, XCircle, Clock, User, DollarSign, FileText } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { logActivity, formatDate } from '../lib/utils';
 import './SharedPages.css';
 
 function ApprovalWorkflow({ user, onLogout }) {
-  const [approvals, setApprovals] = useState([
-    {
-      id: 'APP-001',
-      rfqId: 'RFQ-001',
-      rfqTitle: 'Office Supplies Q1 2026',
-      vendor: 'Global Suppliers',
-      amount: 11800,
-      submittedBy: 'John Doe',
-      submittedDate: '2026-06-05',
-      status: 'pending',
-      priority: 'medium',
-      timeline: [
-        { stage: 'Submitted', date: '2026-06-05', status: 'completed' },
-        { stage: 'Manager Review', date: '2026-06-06', status: 'current' },
-        { stage: 'Final Approval', date: '', status: 'pending' }
-      ]
-    },
-    {
-      id: 'APP-002',
-      rfqId: 'RFQ-002',
-      rfqTitle: 'IT Hardware Procurement',
-      vendor: 'Tech Solutions Inc',
-      amount: 45000,
-      submittedBy: 'Jane Smith',
-      submittedDate: '2026-06-04',
-      status: 'pending',
-      priority: 'high',
-      timeline: [
-        { stage: 'Submitted', date: '2026-06-04', status: 'completed' },
-        { stage: 'Manager Review', date: '2026-06-05', status: 'current' },
-        { stage: 'Final Approval', date: '', status: 'pending' }
-      ]
-    },
-    {
-      id: 'APP-003',
-      rfqId: 'RFQ-003',
-      rfqTitle: 'Marketing Services',
-      vendor: 'Creative Agency',
-      amount: 28500,
-      submittedBy: 'Mike Johnson',
-      submittedDate: '2026-06-03',
-      status: 'approved',
-      priority: 'low',
-      timeline: [
-        { stage: 'Submitted', date: '2026-06-03', status: 'completed' },
-        { stage: 'Manager Review', date: '2026-06-04', status: 'completed' },
-        { stage: 'Final Approval', date: '2026-06-05', status: 'completed' }
-      ]
-    }
-  ]);
-
+  const [approvals, setApprovals] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [remarks, setRemarks] = useState('');
+  const [processing, setProcessing] = useState(false);
 
-  const handleApprove = (approval) => {
+  useEffect(() => {
+    fetchApprovals();
+  }, []);
+
+  const fetchApprovals = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('approvals')
+        .select(`
+          *,
+          rfqs(id, title, priority, created_at),
+          quotations(id, vendor_name, total_amount, vendor_id),
+          profiles!approvals_requested_by_fkey(full_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const approvalsList = data.map(approval => ({
+        id: approval.id,
+        rfqId: approval.rfqs?.id?.substring(0, 8) || 'N/A',
+        rfqTitle: approval.rfqs?.title || 'N/A',
+        priority: approval.rfqs?.priority || 'medium',
+        vendor: approval.quotations?.vendor_name || 'Unknown',
+        vendorId: approval.quotations?.vendor_id,
+        amount: Number(approval.quotations?.total_amount || 0),
+        submittedBy: approval.profiles?.full_name || 'Unknown',
+        submittedDate: formatDate(approval.created_at),
+        status: approval.status,
+        remarks: approval.remarks,
+        quotationId: approval.quotation_id,
+        rfqFullId: approval.rfq_id,
+        timeline: [
+          { stage: 'RFQ Created', status: 'completed', date: formatDate(approval.rfqs?.created_at) },
+          { stage: 'Quotation Selected', status: 'completed', date: formatDate(approval.created_at) },
+          { stage: 'Approval Review', status: approval.status === 'pending' ? 'current' : 'completed', date: approval.status !== 'pending' ? formatDate(approval.created_at) : null },
+          { stage: 'PO Generation', status: approval.status === 'approved' ? 'completed' : 'pending', date: null }
+        ]
+      }));
+
+      setApprovals(approvalsList);
+    } catch (error) {
+      console.error('Error fetching approvals:', error);
+      alert('Error loading approvals');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (approval) => {
     if (!remarks.trim()) {
       alert('Please add approval remarks');
       return;
     }
 
-    setApprovals(approvals.map(app =>
-      app.id === approval.id ? { ...app, status: 'approved' } : app
-    ));
-    
-    alert(`Approval ${approval.id} has been approved!\nProceeding to generate Purchase Order.`);
-    setSelectedApproval(null);
-    setRemarks('');
+    try {
+      setProcessing(true);
+
+      // Update approval status
+      const { error: approvalError } = await supabase
+        .from('approvals')
+        .update({ 
+          status: 'approved', 
+          remarks: remarks,
+          approved_by: user.id 
+        })
+        .eq('id', approval.id);
+
+      if (approvalError) throw approvalError;
+
+      // Create purchase order
+      const subtotal = approval.amount;
+      const tax = subtotal * 0.15;
+      const total = subtotal + tax;
+
+      const { error: poError } = await supabase
+        .from('purchase_orders')
+        .insert([
+          {
+            rfq_id: approval.rfqFullId,
+            quotation_id: approval.quotationId,
+            approval_id: approval.id,
+            vendor_name: approval.vendor,
+            amount: subtotal,
+            tax: tax,
+            total: total,
+            status: 'in_progress',
+            invoice_generated: false
+          }
+        ]);
+
+      if (poError) throw poError;
+
+      // Update RFQ status
+      const { error: rfqError } = await supabase
+        .from('rfqs')
+        .update({ status: 'approved' })
+        .eq('id', approval.rfqFullId);
+
+      if (rfqError) throw rfqError;
+
+      // Log activity
+      await logActivity(
+        user.id,
+        user.name,
+        'Approval Granted',
+        `Approved purchase order for ${approval.vendor} - Amount: $${total.toLocaleString()}`
+      );
+
+      alert(`Approval approved!\nPurchase Order has been generated for ${approval.vendor}.`);
+      setSelectedApproval(null);
+      setRemarks('');
+      await fetchApprovals();
+    } catch (error) {
+      console.error('Error approving:', error);
+      alert('Error approving request. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleReject = (approval) => {
+  const handleReject = async (approval) => {
     if (!remarks.trim()) {
       alert('Please add rejection reason');
       return;
     }
 
-    setApprovals(approvals.map(app =>
-      app.id === approval.id ? { ...app, status: 'rejected' } : app
-    ));
-    
-    alert(`Approval ${approval.id} has been rejected.`);
-    setSelectedApproval(null);
-    setRemarks('');
+    try {
+      setProcessing(true);
+
+      // Update approval status
+      const { error: approvalError } = await supabase
+        .from('approvals')
+        .update({ 
+          status: 'rejected', 
+          remarks: remarks,
+          approved_by: user.id 
+        })
+        .eq('id', approval.id);
+
+      if (approvalError) throw approvalError;
+
+      // Update RFQ status
+      const { error: rfqError } = await supabase
+        .from('rfqs')
+        .update({ status: 'rejected' })
+        .eq('id', approval.rfqFullId);
+
+      if (rfqError) throw rfqError;
+
+      // Log activity
+      await logActivity(
+        user.id,
+        user.name,
+        'Approval Rejected',
+        `Rejected quotation from ${approval.vendor} - Reason: ${remarks}`
+      );
+
+      alert(`Approval rejected.`);
+      setSelectedApproval(null);
+      setRemarks('');
+      await fetchApprovals();
+    } catch (error) {
+      console.error('Error rejecting:', error);
+      alert('Error rejecting request. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const getPriorityColor = (priority) => {
@@ -118,8 +214,21 @@ function ApprovalWorkflow({ user, onLogout }) {
         </div>
 
         {!selectedApproval ? (
-          <div className="approvals-list">
-            {approvals.map((approval) => (
+          <>
+            {loading ? (
+              <div className="loading-state">
+                <div className="spinner"></div>
+                <p>Loading approvals...</p>
+              </div>
+            ) : approvals.length === 0 ? (
+              <div className="empty-state">
+                <CheckCircle size={48} />
+                <h3>No pending approvals</h3>
+                <p>All caught up! Approval requests will appear here.</p>
+              </div>
+            ) : (
+              <div className="approvals-list">
+                {approvals.map((approval) => (
               <div key={approval.id} className="approval-card card">
                 <div className="approval-card-header">
                   <div>
@@ -193,8 +302,10 @@ function ApprovalWorkflow({ user, onLogout }) {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+                ))}
+              </div>
+            )}
+          </>
         ) : (
           <div className="approval-details-view">
             <button className="btn btn-outline" onClick={() => setSelectedApproval(null)}>
@@ -268,16 +379,18 @@ function ApprovalWorkflow({ user, onLogout }) {
                 <button
                   className="btn btn-danger"
                   onClick={() => handleReject(selectedApproval)}
+                  disabled={processing}
                 >
                   <XCircle size={18} />
-                  Reject Request
+                  {processing ? 'Rejecting...' : 'Reject Request'}
                 </button>
                 <button
                   className="btn btn-secondary"
                   onClick={() => handleApprove(selectedApproval)}
+                  disabled={processing}
                 >
                   <CheckCircle size={18} />
-                  Approve Request
+                  {processing ? 'Approving...' : 'Approve Request'}
                 </button>
               </div>
             </div>

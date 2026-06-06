@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { Plus, X, Upload, Calendar, Send, Save, Trash2 } from 'lucide-react';
+import { Plus, X, Upload, Calendar, Send, Save, Trash2, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { logActivity } from '../lib/utils';
 import './RFQCreation.css';
 
 function RFQCreation({ user, onLogout }) {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [vendors, setVendors] = useState([]);
+  const [loadingVendors, setLoadingVendors] = useState(true);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -19,12 +27,27 @@ function RFQCreation({ user, onLogout }) {
   const [selectedVendors, setSelectedVendors] = useState([]);
   const [attachments, setAttachments] = useState([]);
 
-  const vendors = [
-    { id: 1, name: 'Tech Solutions Inc', category: 'IT & Hardware' },
-    { id: 2, name: 'Office Mart', category: 'Office Supplies' },
-    { id: 3, name: 'Global Suppliers', category: 'General' },
-    { id: 4, name: 'Maintenance Pro', category: 'Maintenance' },
-  ];
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  const fetchVendors = async () => {
+    try {
+      setLoadingVendors(true);
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('id, name, category, status')
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      setVendors(data || []);
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+    } finally {
+      setLoadingVendors(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -62,16 +85,75 @@ function RFQCreation({ user, onLogout }) {
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
-    setAttachments([...attachments, ...files.map(f => ({ id: Date.now(), name: f.name }))]);
+    setAttachments([...attachments, ...files.map(f => ({ id: Date.now() + Math.random(), name: f.name }))]);
   };
 
   const removeAttachment = (id) => {
     setAttachments(attachments.filter(a => a.id !== id));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert('RFQ Created Successfully!\n\nRFQ ID: RFQ-' + Date.now() + '\nVendors Notified: ' + selectedVendors.length);
+
+    if (selectedVendors.length === 0) {
+      alert('Please select at least one vendor!');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Insert RFQ
+      const { data: rfqData, error: rfqError } = await supabase
+        .from('rfqs')
+        .insert([
+          {
+            created_by: user.id,
+            title: formData.title,
+            category: formData.category,
+            priority: formData.priority,
+            deadline: formData.deadline,
+            description: formData.description,
+            status: 'pending',
+            selected_vendors: selectedVendors
+          }
+        ])
+        .select()
+        .single();
+
+      if (rfqError) throw rfqError;
+
+      // Insert RFQ items
+      const itemsToInsert = items.map(item => ({
+        rfq_id: rfqData.id,
+        product_name: item.product,
+        quantity: parseInt(item.quantity),
+        unit: item.unit,
+        specifications: item.specifications
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('rfq_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+
+      // Log activity
+      await logActivity(
+        user.id,
+        user.name,
+        'RFQ Created',
+        `Created RFQ: ${formData.title} with ${items.length} items for ${selectedVendors.length} vendors`
+      );
+
+      alert(`RFQ Created Successfully!\n\nRFQ: ${formData.title}\nVendors Notified: ${selectedVendors.length}`);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error creating RFQ:', error);
+      alert('Error creating RFQ. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -255,26 +337,44 @@ function RFQCreation({ user, onLogout }) {
 
           <div className="form-section">
             <h3>Select Vendors</h3>
-            <div className="vendors-grid">
-              {vendors.map((vendor) => (
-                <div
-                  key={vendor.id}
-                  className={`vendor-select-card ${selectedVendors.includes(vendor.id) ? 'selected' : ''}`}
-                  onClick={() => toggleVendor(vendor.id)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedVendors.includes(vendor.id)}
-                    onChange={() => {}}
-                  />
-                  <div>
-                    <h4>{vendor.name}</h4>
-                    <p>{vendor.category}</p>
-                  </div>
+            {loadingVendors ? (
+              <div className="loading-state">
+                <div className="spinner"></div>
+                <p>Loading vendors...</p>
+              </div>
+            ) : vendors.length > 0 ? (
+              <>
+                <div className="vendors-grid">
+                  {vendors.map((vendor) => (
+                    <div
+                      key={vendor.id}
+                      className={`vendor-select-card ${selectedVendors.includes(vendor.id) ? 'selected' : ''}`}
+                      onClick={() => toggleVendor(vendor.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedVendors.includes(vendor.id)}
+                        onChange={() => {}}
+                      />
+                      <div>
+                        <h4>{vendor.name}</h4>
+                        <p>{vendor.category}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <p className="helper-text">Selected: {selectedVendors.length} vendor(s)</p>
+                <p className="helper-text">Selected: {selectedVendors.length} vendor(s)</p>
+              </>
+            ) : (
+              <div className="empty-state">
+                <User size={48} />
+                <p>No vendors available. Please add vendors first in Vendor Management.</p>
+                <Link to="/vendors" className="btn btn-secondary">
+                  <Plus size={18} />
+                  Add Vendors
+                </Link>
+              </div>
+            )}
           </div>
 
           <div className="form-section">
@@ -309,13 +409,16 @@ function RFQCreation({ user, onLogout }) {
           </div>
 
           <div className="form-actions">
-            <button type="button" className="btn btn-outline">
-              <Save size={18} />
-              Save as Draft
-            </button>
-            <button type="submit" className="btn btn-primary">
-              <Send size={18} />
-              Send RFQ to Vendors
+            <Link to="/dashboard" className="btn btn-outline">
+              Cancel
+            </Link>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Creating...' : (
+                <>
+                  <Send size={18} />
+                  Send RFQ to Vendors
+                </>
+              )}
             </button>
           </div>
         </form>

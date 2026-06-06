@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { 
   Activity, 
@@ -8,132 +8,116 @@ import {
   Send, 
   User,
   Filter,
-  Calendar
+  Calendar,
+  Plus,
+  Edit,
+  Trash2
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { formatDate } from '../lib/utils';
 import './SharedPages.css';
 
 function ActivityLogs({ user, onLogout }) {
   const [filterType, setFilterType] = useState('all');
   const [filterDate, setFilterDate] = useState('all');
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const activities = [
-    {
-      id: 1,
-      type: 'rfq_created',
-      title: 'RFQ Created',
-      description: 'New RFQ "Office Supplies Q1 2026" created',
-      user: 'John Doe',
-      timestamp: '2026-06-06 10:30 AM',
-      icon: FileText,
-      color: 'primary'
-    },
-    {
-      id: 2,
-      type: 'quotation_submitted',
-      title: 'Quotation Received',
-      description: 'Global Suppliers submitted quotation for RFQ-001',
-      user: 'Global Suppliers',
-      timestamp: '2026-06-06 09:15 AM',
-      icon: Send,
-      color: 'info'
-    },
-    {
-      id: 3,
-      type: 'approval_approved',
-      title: 'Approval Granted',
-      description: 'APP-001 approved by Manager',
-      user: 'Jane Smith (Manager)',
-      timestamp: '2026-06-05 04:30 PM',
-      icon: CheckCircle,
-      color: 'success'
-    },
-    {
-      id: 4,
-      type: 'po_generated',
-      title: 'Purchase Order Generated',
-      description: 'PO-2026-001 generated for Global Suppliers',
-      user: 'System',
-      timestamp: '2026-06-05 04:35 PM',
-      icon: FileText,
-      color: 'success'
-    },
-    {
-      id: 5,
-      type: 'quotation_submitted',
-      title: 'Quotation Received',
-      description: 'Tech Solutions Inc submitted quotation for RFQ-002',
-      user: 'Tech Solutions Inc',
-      timestamp: '2026-06-05 02:20 PM',
-      icon: Send,
-      color: 'info'
-    },
-    {
-      id: 6,
-      type: 'rfq_created',
-      title: 'RFQ Created',
-      description: 'New RFQ "IT Hardware Procurement" created',
-      user: 'Mike Johnson',
-      timestamp: '2026-06-05 11:00 AM',
-      icon: FileText,
-      color: 'primary'
-    },
-    {
-      id: 7,
-      type: 'approval_rejected',
-      title: 'Approval Rejected',
-      description: 'APP-005 rejected due to budget constraints',
-      user: 'David Wilson (Manager)',
-      timestamp: '2026-06-04 03:45 PM',
-      icon: XCircle,
-      color: 'danger'
-    },
-    {
-      id: 8,
-      type: 'vendor_added',
-      title: 'New Vendor Added',
-      description: 'Maintenance Pro registered as new vendor',
-      user: 'Admin',
-      timestamp: '2026-06-04 10:15 AM',
-      icon: User,
-      color: 'success'
-    },
-    {
-      id: 9,
-      type: 'invoice_sent',
-      title: 'Invoice Sent',
-      description: 'Invoice INV-2026-001 sent to Global Suppliers',
-      user: 'System',
-      timestamp: '2026-06-03 05:00 PM',
-      icon: Send,
-      color: 'info'
-    },
-    {
-      id: 10,
-      type: 'quotation_submitted',
-      title: 'Quotation Received',
-      description: 'Office Mart submitted quotation for RFQ-001',
-      user: 'Office Mart',
-      timestamp: '2026-06-03 02:30 PM',
-      icon: Send,
-      color: 'info'
+  useEffect(() => {
+    fetchActivities();
+  }, []);
+
+  const fetchActivities = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const activitiesList = data.map(log => {
+        // Determine icon and color based on action
+        let icon = Activity;
+        let color = 'primary';
+
+        if (log.action.includes('Created') || log.action.includes('Added')) {
+          icon = Plus;
+          color = 'success';
+        } else if (log.action.includes('Updated') || log.action.includes('Edited')) {
+          icon = Edit;
+          color = 'info';
+        } else if (log.action.includes('Deleted') || log.action.includes('Rejected')) {
+          icon = Trash2;
+          color = 'danger';
+        } else if (log.action.includes('Approved') || log.action.includes('Generated')) {
+          icon = CheckCircle;
+          color = 'success';
+        } else if (log.action.includes('Submitted') || log.action.includes('Sent')) {
+          icon = Send;
+          color = 'primary';
+        }
+
+        return {
+          id: log.id,
+          title: log.action,
+          description: log.description,
+          user: log.user_name,
+          timestamp: formatDate(log.created_at) + ' ' + new Date(log.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          icon: icon,
+          color: color,
+          type: log.action.toLowerCase().replace(/\s/g, '_'),
+          date: new Date(log.created_at)
+        };
+      });
+
+      setActivities(activitiesList);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      alert('Error loading activity logs');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const filteredActivities = activities.filter(activity => {
-    if (filterType !== 'all' && activity.type !== filterType) return false;
-    // Date filtering can be implemented with actual date comparison
+    // Filter by type
+    if (filterType !== 'all') {
+      const typeMatch = activity.type.includes(filterType);
+      if (!typeMatch) return false;
+    }
+
+    // Filter by date
+    if (filterDate !== 'all') {
+      const now = new Date();
+      const activityDate = activity.date;
+      
+      if (filterDate === 'today') {
+        const isToday = activityDate.toDateString() === now.toDateString();
+        if (!isToday) return false;
+      } else if (filterDate === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        if (activityDate < weekAgo) return false;
+      } else if (filterDate === 'month') {
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        if (activityDate < monthAgo) return false;
+      }
+    }
+
     return true;
   });
 
   const activityTypes = [
     { value: 'all', label: 'All Activities' },
-    { value: 'rfq_created', label: 'RFQ Created' },
-    { value: 'quotation_submitted', label: 'Quotations' },
-    { value: 'approval_approved', label: 'Approvals' },
-    { value: 'approval_rejected', label: 'Rejections' },
-    { value: 'po_generated', label: 'Purchase Orders' },
-    { value: 'invoice_sent', label: 'Invoices' },
-    { value: 'vendor_added', label: 'Vendor Changes' }
+    { value: 'created', label: 'Created' },
+    { value: 'submitted', label: 'Submitted' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+    { value: 'generated', label: 'Generated' },
+    { value: 'updated', label: 'Updated' },
+    { value: 'deleted', label: 'Deleted' }
   ];
 
   return (
@@ -177,7 +161,13 @@ function ActivityLogs({ user, onLogout }) {
         </div>
 
         {/* Timeline */}
-        <div className="activity-timeline">
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Loading activity logs...</p>
+          </div>
+        ) : (
+          <div className="activity-timeline">
           {filteredActivities.map((activity) => {
             const Icon = activity.icon;
             return (
@@ -201,8 +191,17 @@ function ActivityLogs({ user, onLogout }) {
             );
           })}
         </div>
+        )}
 
-        {filteredActivities.length === 0 && (
+        {!loading && filteredActivities.length === 0 && activities.length === 0 && (
+          <div className="empty-state">
+            <Activity size={48} />
+            <h3>No activity yet</h3>
+            <p>Activity logs will appear here as you use the system</p>
+          </div>
+        )}
+
+        {!loading && filteredActivities.length === 0 && activities.length > 0 && (
           <div className="empty-state">
             <Activity size={48} />
             <h3>No activities found</h3>

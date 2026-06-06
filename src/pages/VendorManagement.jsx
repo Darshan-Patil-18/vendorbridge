@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { 
   Plus, 
@@ -14,59 +14,12 @@ import {
   Save,
   Star
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import './VendorManagement.css';
 
 function VendorManagement({ user, onLogout }) {
-  const [vendors, setVendors] = useState([
-    {
-      id: 1,
-      name: 'Tech Solutions Inc',
-      category: 'IT & Hardware',
-      email: 'contact@techsolutions.com',
-      phone: '+1 234-567-8900',
-      gst: 'GST123456789',
-      address: '123 Tech Street, Silicon Valley, CA',
-      status: 'active',
-      rating: 4.5,
-      totalOrders: 45
-    },
-    {
-      id: 2,
-      name: 'Office Mart',
-      category: 'Office Supplies',
-      email: 'sales@officemart.com',
-      phone: '+1 234-567-8901',
-      gst: 'GST987654321',
-      address: '456 Business Ave, New York, NY',
-      status: 'active',
-      rating: 4.2,
-      totalOrders: 32
-    },
-    {
-      id: 3,
-      name: 'Global Suppliers',
-      category: 'General',
-      email: 'info@globalsuppliers.com',
-      phone: '+1 234-567-8902',
-      gst: 'GST456789123',
-      address: '789 Commerce Blvd, Boston, MA',
-      status: 'active',
-      rating: 4.8,
-      totalOrders: 67
-    },
-    {
-      id: 4,
-      name: 'Maintenance Pro',
-      category: 'Maintenance',
-      email: 'service@maintenancepro.com',
-      phone: '+1 234-567-8903',
-      gst: 'GST321654987',
-      address: '321 Service Lane, Chicago, IL',
-      status: 'inactive',
-      rating: 3.9,
-      totalOrders: 23
-    },
-  ]);
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -78,12 +31,50 @@ function VendorManagement({ user, onLogout }) {
     category: '',
     email: '',
     phone: '',
-    gst: '',
+    gst_number: '',
     address: '',
     status: 'active'
   });
 
   const categories = ['IT & Hardware', 'Office Supplies', 'General', 'Maintenance', 'Services'];
+
+  // Fetch vendors on component mount
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  const fetchVendors = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setVendors(data || []);
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+      alert('Error loading vendors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logActivity = async (action, description) => {
+    try {
+      await supabase.from('activity_logs').insert([
+        {
+          user_id: user.id,
+          user_name: user.name,
+          action: action,
+          description: description,
+        }
+      ]);
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  };
 
   const handleAddVendor = () => {
     setEditingVendor(null);
@@ -92,7 +83,7 @@ function VendorManagement({ user, onLogout }) {
       category: '',
       email: '',
       phone: '',
-      gst: '',
+      gst_number: '',
       address: '',
       status: 'active'
     });
@@ -101,32 +92,78 @@ function VendorManagement({ user, onLogout }) {
 
   const handleEditVendor = (vendor) => {
     setEditingVendor(vendor);
-    setFormData(vendor);
+    setFormData({
+      name: vendor.name,
+      category: vendor.category,
+      email: vendor.email,
+      phone: vendor.phone,
+      gst_number: vendor.gst_number,
+      address: vendor.address,
+      status: vendor.status
+    });
     setShowModal(true);
   };
 
-  const handleDeleteVendor = (id) => {
-    if (confirm('Are you sure you want to delete this vendor?')) {
-      setVendors(vendors.filter(v => v.id !== id));
+  const handleDeleteVendor = async (id, vendorName) => {
+    if (confirm(`Are you sure you want to delete ${vendorName}?`)) {
+      try {
+        const { error } = await supabase
+          .from('vendors')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        await logActivity('Vendor Deleted', `Deleted vendor: ${vendorName}`);
+        await fetchVendors();
+        alert('Vendor deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting vendor:', error);
+        alert('Error deleting vendor');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (editingVendor) {
-      setVendors(vendors.map(v => v.id === editingVendor.id ? { ...formData, id: v.id } : v));
-    } else {
-      const newVendor = {
-        ...formData,
-        id: Date.now(),
-        rating: 0,
-        totalOrders: 0
-      };
-      setVendors([...vendors, newVendor]);
+    try {
+      if (editingVendor) {
+        // Update existing vendor
+        const { error } = await supabase
+          .from('vendors')
+          .update(formData)
+          .eq('id', editingVendor.id);
+
+        if (error) throw error;
+
+        await logActivity('Vendor Updated', `Updated vendor: ${formData.name}`);
+        alert('Vendor updated successfully!');
+      } else {
+        // Add new vendor
+        const { error } = await supabase
+          .from('vendors')
+          .insert([
+            {
+              ...formData,
+              created_by: user.id,
+              rating: 0,
+              total_orders: 0
+            }
+          ]);
+
+        if (error) throw error;
+
+        await logActivity('Vendor Added', `Added new vendor: ${formData.name}`);
+        alert('Vendor added successfully!');
+      }
+      
+      await fetchVendors();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error saving vendor:', error);
+      alert('Error saving vendor');
     }
-    
-    setShowModal(false);
   };
 
   const handleChange = (e) => {
@@ -204,72 +241,93 @@ function VendorManagement({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Vendors Grid */}
-        <div className="vendors-grid">
-          {filteredVendors.map((vendor) => (
-            <div key={vendor.id} className="vendor-card">
-              <div className="vendor-header">
-                <div className="vendor-icon">
-                  <Building2 size={24} />
-                </div>
-                <div className="vendor-actions">
-                  <button className="icon-btn" onClick={() => handleEditVendor(vendor)}>
-                    <Edit size={16} />
-                  </button>
-                  <button className="icon-btn danger" onClick={() => handleDeleteVendor(vendor.id)}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="vendor-info">
-                <h3>{vendor.name}</h3>
-                <span className={`badge badge-${vendor.status === 'active' ? 'success' : 'danger'}`}>
-                  {vendor.status}
-                </span>
-              </div>
-
-              <div className="vendor-category">
-                {vendor.category}
-              </div>
-
-              {renderStars(vendor.rating)}
-
-              <div className="vendor-details">
-                <div className="detail-item">
-                  <Mail size={14} />
-                  <span>{vendor.email}</span>
-                </div>
-                <div className="detail-item">
-                  <Phone size={14} />
-                  <span>{vendor.phone}</span>
-                </div>
-                <div className="detail-item">
-                  <MapPin size={14} />
-                  <span>{vendor.address}</span>
-                </div>
-              </div>
-
-              <div className="vendor-stats">
-                <div className="stat-item">
-                  <span className="stat-label">GST Number</span>
-                  <span className="stat-value">{vendor.gst}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-label">Total Orders</span>
-                  <span className="stat-value">{vendor.totalOrders}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredVendors.length === 0 && (
-          <div className="empty-state">
-            <Building2 size={48} />
-            <h3>No vendors found</h3>
-            <p>Try adjusting your search or filters</p>
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Loading vendors...</p>
           </div>
+        ) : (
+          <>
+            {/* Vendors Grid */}
+            <div className="vendors-grid">
+              {filteredVendors.map((vendor) => (
+                <div key={vendor.id} className="vendor-card">
+                  <div className="vendor-header">
+                    <div className="vendor-icon">
+                      <Building2 size={24} />
+                    </div>
+                    <div className="vendor-actions">
+                      <button className="icon-btn" onClick={() => handleEditVendor(vendor)}>
+                        <Edit size={16} />
+                      </button>
+                      <button className="icon-btn danger" onClick={() => handleDeleteVendor(vendor.id, vendor.name)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="vendor-info">
+                    <h3>{vendor.name}</h3>
+                    <span className={`badge badge-${vendor.status === 'active' ? 'success' : 'danger'}`}>
+                      {vendor.status}
+                    </span>
+                  </div>
+
+                  <div className="vendor-category">
+                    {vendor.category}
+                  </div>
+
+                  {renderStars(vendor.rating || 0)}
+
+                  <div className="vendor-details">
+                    <div className="detail-item">
+                      <Mail size={14} />
+                      <span>{vendor.email}</span>
+                    </div>
+                    <div className="detail-item">
+                      <Phone size={14} />
+                      <span>{vendor.phone}</span>
+                    </div>
+                    <div className="detail-item">
+                      <MapPin size={14} />
+                      <span>{vendor.address}</span>
+                    </div>
+                  </div>
+
+                  <div className="vendor-stats">
+                    <div className="stat-item">
+                      <span className="stat-label">GST Number</span>
+                      <span className="stat-value">{vendor.gst_number}</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Total Orders</span>
+                      <span className="stat-value">{vendor.total_orders || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredVendors.length === 0 && vendors.length === 0 && (
+              <div className="empty-state">
+                <Building2 size={48} />
+                <h3>No vendors yet. Add your first vendor!</h3>
+                <p>Start building your vendor database</p>
+                <button className="btn btn-primary" onClick={handleAddVendor}>
+                  <Plus size={18} />
+                  Add First Vendor
+                </button>
+              </div>
+            )}
+
+            {filteredVendors.length === 0 && vendors.length > 0 && (
+              <div className="empty-state">
+                <Building2 size={48} />
+                <h3>No vendors found</h3>
+                <p>Try adjusting your search or filters</p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Add/Edit Modal */}
@@ -361,13 +419,13 @@ function VendorManagement({ user, onLogout }) {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="gst">GST Number *</label>
+                    <label htmlFor="gst_number">GST Number *</label>
                     <input
                       type="text"
-                      id="gst"
-                      name="gst"
+                      id="gst_number"
+                      name="gst_number"
                       className="form-control"
-                      value={formData.gst}
+                      value={formData.gst_number}
                       onChange={handleChange}
                       required
                     />
