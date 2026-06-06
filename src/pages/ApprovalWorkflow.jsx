@@ -19,92 +19,126 @@ function ApprovalWorkflow({ user, onLogout }) {
   const fetchApprovals = async () => {
     try {
       setLoading(true);
+      console.log('Fetching approvals...');
       
-      // Fetch approvals
+      // Step 1: Fetch all approvals
       const { data: approvalsData, error: approvalsError } = await supabase
         .from('approvals')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (approvalsError) throw approvalsError;
+      console.log('Approvals data:', approvalsData);
+
+      if (approvalsError) {
+        console.error('Approvals error:', approvalsError);
+        throw approvalsError;
+      }
 
       if (!approvalsData || approvalsData.length === 0) {
+        console.log('No approvals found');
         setApprovals([]);
+        setLoading(false);
         return;
       }
 
-      // Get related data separately to avoid join issues
+      // Step 2: Get unique IDs for batch fetching
       const rfqIds = [...new Set(approvalsData.map(a => a.rfq_id).filter(Boolean))];
       const quotationIds = [...new Set(approvalsData.map(a => a.quotation_id).filter(Boolean))];
       const userIds = [...new Set(approvalsData.map(a => a.requested_by).filter(Boolean))];
 
-      // Fetch RFQs
-      const { data: rfqsData } = await supabase
-        .from('rfqs')
-        .select('id, title, priority, created_at')
-        .in('id', rfqIds);
+      console.log('Fetching related data...', { rfqIds, quotationIds, userIds });
 
-      // Fetch Quotations
-      const { data: quotationsData } = await supabase
-        .from('quotations')
-        .select('id, vendor_name, total_amount, vendor_id')
-        .in('id', quotationIds);
+      // Step 3: Fetch related data in parallel with error handling
+      const [rfqsResult, quotationsResult, profilesResult] = await Promise.all([
+        rfqIds.length > 0 
+          ? supabase.from('rfqs').select('id, title, priority, created_at').in('id', rfqIds)
+          : Promise.resolve({ data: [] }),
+        quotationIds.length > 0
+          ? supabase.from('quotations').select('id, vendor_name, total_amount, vendor_id').in('id', quotationIds)
+          : Promise.resolve({ data: [] }),
+        userIds.length > 0
+          ? supabase.from('profiles').select('id, full_name').in('id', userIds)
+          : Promise.resolve({ data: [] })
+      ]);
 
-      // Fetch User profiles
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', userIds);
+      console.log('Related data fetched:', {
+        rfqs: rfqsResult.data?.length || 0,
+        quotations: quotationsResult.data?.length || 0,
+        profiles: profilesResult.data?.length || 0
+      });
 
-      // Create lookup maps
-      const rfqsMap = (rfqsData || []).reduce((acc, rfq) => {
-        acc[rfq.id] = rfq;
-        return acc;
-      }, {});
+      // Step 4: Create lookup maps
+      const rfqsMap = {};
+      const quotationsMap = {};
+      const profilesMap = {};
 
-      const quotationsMap = (quotationsData || []).reduce((acc, q) => {
-        acc[q.id] = q;
-        return acc;
-      }, {});
+      (rfqsResult.data || []).forEach(rfq => {
+        rfqsMap[rfq.id] = rfq;
+      });
 
-      const profilesMap = (profilesData || []).reduce((acc, p) => {
-        acc[p.id] = p;
-        return acc;
-      }, {});
+      (quotationsResult.data || []).forEach(q => {
+        quotationsMap[q.id] = q;
+      });
 
-      // Map approvals with related data
+      (profilesResult.data || []).forEach(p => {
+        profilesMap[p.id] = p;
+      });
+
+      // Step 5: Map approvals with related data
       const approvalsList = approvalsData.map(approval => {
         const rfq = rfqsMap[approval.rfq_id] || {};
         const quotation = quotationsMap[approval.quotation_id] || {};
         const profile = profilesMap[approval.requested_by] || {};
 
+        const rfqIdShort = rfq.id ? String(rfq.id).substring(0, 8) : 'N/A';
+        const approvalId = approval.id ? String(approval.id).substring(0, 8) : 'N/A';
+
         return {
-          id: approval.id,
-          rfqId: rfq.id?.substring(0, 8) || 'N/A',
+          id: approvalId,
+          fullId: approval.id,
+          rfqId: rfqIdShort,
           rfqTitle: rfq.title || 'N/A',
           priority: rfq.priority || 'medium',
-          vendor: quotation.vendor_name || 'Unknown',
-          vendorId: quotation.vendor_id,
+          vendor: quotation.vendor_name || 'Unknown Vendor',
+          vendorId: quotation.vendor_id || null,
           amount: Number(quotation.total_amount || 0),
-          submittedBy: profile.full_name || 'Unknown',
+          submittedBy: profile.full_name || 'Unknown User',
           submittedDate: formatDate(approval.created_at),
-          status: approval.status,
-          remarks: approval.remarks,
+          status: approval.status || 'pending',
+          remarks: approval.remarks || '',
           quotationId: approval.quotation_id,
           rfqFullId: approval.rfq_id,
           timeline: [
-            { stage: 'RFQ Created', status: 'completed', date: formatDate(rfq.created_at) },
-            { stage: 'Quotation Selected', status: 'completed', date: formatDate(approval.created_at) },
-            { stage: 'Approval Review', status: approval.status === 'pending' ? 'current' : 'completed', date: approval.status !== 'pending' ? formatDate(approval.created_at) : null },
-            { stage: 'PO Generation', status: approval.status === 'approved' ? 'completed' : 'pending', date: null }
+            { 
+              stage: 'RFQ Created', 
+              status: 'completed', 
+              date: rfq.created_at ? formatDate(rfq.created_at) : null 
+            },
+            { 
+              stage: 'Quotation Selected', 
+              status: 'completed', 
+              date: formatDate(approval.created_at) 
+            },
+            { 
+              stage: 'Approval Review', 
+              status: approval.status === 'pending' ? 'current' : 'completed', 
+              date: approval.status !== 'pending' ? formatDate(approval.updated_at || approval.created_at) : null 
+            },
+            { 
+              stage: 'PO Generation', 
+              status: approval.status === 'approved' ? 'completed' : 'pending', 
+              date: null 
+            }
           ]
         };
       });
 
+      console.log('Mapped approvals:', approvalsList);
       setApprovals(approvalsList);
     } catch (error) {
       console.error('Error fetching approvals:', error);
-      alert('Error loading approvals: ' + (error.message || 'Unknown error'));
+      console.error('Error details:', error.message, error.details, error.hint);
+      alert('Error loading approvals: ' + (error.message || 'Unknown error. Check console for details.'));
     } finally {
       setLoading(false);
     }
@@ -127,7 +161,7 @@ function ApprovalWorkflow({ user, onLogout }) {
           remarks: remarks,
           approved_by: user.id 
         })
-        .eq('id', approval.id);
+        .eq('id', approval.fullId);
 
       if (approvalError) throw approvalError;
 
@@ -142,7 +176,7 @@ function ApprovalWorkflow({ user, onLogout }) {
           {
             rfq_id: approval.rfqFullId,
             quotation_id: approval.quotationId,
-            approval_id: approval.id,
+            approval_id: approval.fullId,
             vendor_name: approval.vendor,
             amount: subtotal,
             tax: tax,
@@ -199,7 +233,7 @@ function ApprovalWorkflow({ user, onLogout }) {
           remarks: remarks,
           approved_by: user.id 
         })
-        .eq('id', approval.id);
+        .eq('id', approval.fullId);
 
       if (approvalError) throw approvalError;
 
@@ -276,7 +310,7 @@ function ApprovalWorkflow({ user, onLogout }) {
             ) : (
               <div className="approvals-list">
                 {approvals.map((approval) => (
-              <div key={approval.id} className="approval-card card">
+              <div key={approval.fullId} className="approval-card card">
                 <div className="approval-card-header">
                   <div>
                     <h3>{approval.rfqTitle}</h3>
