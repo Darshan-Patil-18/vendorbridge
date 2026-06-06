@@ -1,0 +1,58 @@
+# Commands to Deploy VendorBridge to GitHub Pages
+
+## Step 1: Add all files
+git add .
+
+## Step 2: Commit changes
+git commit -m "Fix: Update routing for GitHub Pages compatibility and resolve deployment issues"
+
+## Step 3: Push to GitHub
+git push origin main
+
+## Step 4: Wait for deployment
+# Go to your GitHub repository
+# Click on "Actions" tab
+# Watch the deployment workflow complete
+# It should take 2-3 minutes
+
+## Step 5: Access your site
+# Visit: https://[your-username].github.io/vendorbridgedemo/
+# For example: https://darshan.github.io/vendorbridgedemo/
+
+## If you need to check the deployment status:
+# 1. Go to your GitHub repository
+# 2. Click "Actions" tab
+# 3. Look for the latest workflow run
+# 4. If it's green with a checkmark, deployment succeeded
+# 5. If it's red with an X, click it to see error details
+
+## Common Issues and Solutions:
+
+### Issue 1: Site shows 404
+Solution: Make sure GitHub Pages is enabled in repository Settings > Pages
+
+### Issue 2: Assets not loading
+Solution: Clear browser cache (Ctrl+Shift+Delete) and hard refresh (Ctrl+Shift+R)
+
+### Issue 3: Blank page
+Solution: Check browser console (F12) for errors and verify base path in vite.config.js
+
+### Issue 4: Routes not working
+Solution: This is now fixed with HashRouter - routes use # (e.g., /#/dashboard)
+
+## Quick Test Locally Before Deploying:
+npm run build
+npm run preview
+# Open http://localhost:4173 in your browser
+
+## What Changed to Fix the Issue:
+✅ Changed BrowserRouter to HashRouter in App.jsx
+✅ Added 404.html for GitHub Pages SPA support
+✅ Added routing redirect script in index.html
+✅ Added .nojekyll file to preserve underscore files
+✅ Configured base path in vite.config.js
+
+## Your site will be live at:
+https://darshan.github.io/vendorbridgedemo/
+
+Note: Replace 'darshan' with your actual GitHub username if different

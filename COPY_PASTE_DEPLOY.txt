@@ -1,0 +1,50 @@
+═══════════════════════════════════════════════════════════
+   COPY & PASTE THESE COMMANDS TO DEPLOY
+═══════════════════════════════════════════════════════════
+
+Open your terminal/command prompt in the vendorbridge folder.
+
+Then copy and paste these commands ONE AT A TIME:
+
+───────────────────────────────────────────────────────────
+COMMAND 1: Stage all changes
+───────────────────────────────────────────────────────────
+
+git add .
+
+(Press Enter after pasting)
+
+───────────────────────────────────────────────────────────
+COMMAND 2: Commit with message
+───────────────────────────────────────────────────────────
+
+git commit -m "Fix: GitHub Pages routing with HashRouter"
+
+(Press Enter after pasting)
+
+───────────────────────────────────────────────────────────
+COMMAND 3: Push to GitHub
+───────────────────────────────────────────────────────────
+
+git push origin main
+
+(Press Enter after pasting)
+
+───────────────────────────────────────────────────────────
+
+DONE! ✅
+
+Now:
+1. Go to your GitHub repository
+2. Click "Actions" tab
+3. Watch the deployment workflow (2-3 minutes)
+4. When you see green checkmark ✅, it's live!
+
+Your site: https://[your-username].github.io/vendorbridgedemo/
+
+═══════════════════════════════════════════════════════════
+
+ALL-IN-ONE COMMAND (if you're confident):
+git add . && git commit -m "Fix: GitHub Pages routing" && git push origin main
+
+═══════════════════════════════════════════════════════════
