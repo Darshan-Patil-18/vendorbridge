@@ -25,11 +25,12 @@ function QuotationSubmission({ user, onLogout }) {
     try {
       setLoading(true);
       
-      // Get RFQs where current user is in selected_vendors
+      // Fetch ALL RFQs with status 'pending' or 'in_review'
+      // This allows any registered vendor to see and quote on all available RFQs
       const { data: rfqsData, error: rfqsError } = await supabase
         .from('rfqs')
         .select('*, rfq_items(*)')
-        .contains('selected_vendors', [user.id])
+        .in('status', ['pending', 'in_review'])
         .order('created_at', { ascending: false });
 
       if (rfqsError) throw rfqsError;

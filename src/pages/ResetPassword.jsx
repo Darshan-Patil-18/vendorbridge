@@ -17,28 +17,55 @@ function ResetPassword() {
 
   useEffect(() => {
     // Extract access_token from URL hash
-    // The hash format with HashRouter is: #/reset-password#access_token=xxx&refresh_token=yyy
+    // Handle multiple formats:
+    // 1. #/reset-password#access_token=xxx (HashRouter with nested hash)
+    // 2. #access_token=xxx (Direct from email)
     const fullHash = window.location.hash;
     
     console.log('Full hash:', fullHash);
+    console.log('Full URL:', window.location.href);
     
     let accessToken = null;
     let refreshToken = null;
+    let tokenType = null;
     
-    // Remove the first # and split by remaining #
-    const hashWithoutFirst = fullHash.substring(1); // Remove first #
-    const parts = hashWithoutFirst.split('#');
-    
-    console.log('Hash parts:', parts);
-    
-    // Find the part with access_token (should be the second part)
-    for (const part of parts) {
-      if (part.includes('access_token=')) {
-        const params = new URLSearchParams(part);
+    // Try multiple parsing strategies
+    if (fullHash.includes('access_token=')) {
+      // Strategy 1: Split by # and check all parts
+      const parts = fullHash.split('#');
+      console.log('Hash parts:', parts);
+      
+      for (const part of parts) {
+        if (part.includes('access_token=')) {
+          // Remove any leading path (like /reset-password)
+          const tokenPart = part.includes('&') || part.includes('=') ? part : '';
+          if (tokenPart) {
+            const params = new URLSearchParams(tokenPart.split('?').pop());
+            accessToken = params.get('access_token');
+            refreshToken = params.get('refresh_token');
+            tokenType = params.get('type');
+            console.log('Found tokens:', { 
+              accessToken: accessToken ? 'exists' : 'null', 
+              refreshToken: refreshToken ? 'exists' : 'null',
+              type: tokenType 
+            });
+            break;
+          }
+        }
+      }
+      
+      // Strategy 2: If still not found, try parsing as query string
+      if (!accessToken && fullHash.includes('access_token=')) {
+        const queryPart = fullHash.substring(fullHash.indexOf('access_token='));
+        const params = new URLSearchParams(queryPart);
         accessToken = params.get('access_token');
         refreshToken = params.get('refresh_token');
-        console.log('Found tokens:', { accessToken: accessToken ? 'exists' : 'null', refreshToken: refreshToken ? 'exists' : 'null' });
-        break;
+        tokenType = params.get('type');
+        console.log('Found tokens (strategy 2):', { 
+          accessToken: accessToken ? 'exists' : 'null', 
+          refreshToken: refreshToken ? 'exists' : 'null',
+          type: tokenType 
+        });
       }
     }
 
