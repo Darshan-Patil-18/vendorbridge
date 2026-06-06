@@ -51,20 +51,6 @@ VendorBridge is a sophisticated procurement management platform designed to mode
 
 **Production URL:** [https://vendorbridge-lilac.vercel.app/](https://vendorbridge-lilac.vercel.app/)
 
-### Test Accounts
-
-You can test the system with these demo accounts:
-
-| Role | Email | Password | Access |
-|------|-------|----------|--------|
-| Procurement Officer | officer@test.com | test123 | Create RFQs, Compare Quotes |
-| Vendor | vendor@test.com | test123 | View RFQs, Submit Quotes |
-| Manager/Approver | manager@test.com | test123 | Review & Approve Requests |
-
-> **Note:** Demo accounts may be reset periodically. Feel free to create your own test account!
-
----
-
 ## ✨ Key Features
 
 ### 🔐 Authentication & Security
@@ -1324,7 +1310,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - **Live Demo:** [https://vendorbridge-lilac.vercel.app/](https://vendorbridge-lilac.vercel.app/)
 - **Issues:** Open an issue on GitHub
-- **Email:** support@vendorbridge.com
+- **Email:** darshanpatil9518@gmail.com
 - **Documentation:** This README
 
 ---
