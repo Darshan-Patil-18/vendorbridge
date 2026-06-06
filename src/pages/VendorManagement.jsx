@@ -33,8 +33,7 @@ function VendorManagement({ user, onLogout }) {
     phone: '',
     gst_number: '',
     address: '',
-    status: 'active',
-    user_id: ''
+    status: 'active'
   });
 
   const categories = ['IT & Hardware', 'Office Supplies', 'General', 'Maintenance', 'Services'];
@@ -86,8 +85,7 @@ function VendorManagement({ user, onLogout }) {
       phone: '',
       gst_number: '',
       address: '',
-      status: 'active',
-      user_id: ''
+      status: 'active'
     });
     setShowModal(true);
   };
@@ -101,8 +99,7 @@ function VendorManagement({ user, onLogout }) {
       phone: vendor.phone,
       gst_number: vendor.gst_number,
       address: vendor.address,
-      status: vendor.status,
-      user_id: vendor.user_id || ''
+      status: vendor.status
     });
     setShowModal(true);
   };
@@ -445,22 +442,6 @@ function VendorManagement({ user, onLogout }) {
                       rows="3"
                       required
                     />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="user_id">Vendor User ID (optional)</label>
-                    <input
-                      type="text"
-                      id="user_id"
-                      name="user_id"
-                      className="form-control"
-                      placeholder="Enter vendor's account user ID (UUID)"
-                      value={formData.user_id}
-                      onChange={handleChange}
-                    />
-                    <small style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                      Link this vendor card to their login account. Leave blank if not applicable.
-                    </small>
                   </div>
                 </div>
 
